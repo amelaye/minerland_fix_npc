@@ -208,3 +208,6 @@ core.register_on_mods_loaded(function()
 	wrap_rightclick("mobs_npc:igor")
 	wrap_rightclick("mobs_npc:trader")
 end)
+
+-- garde
+dofile(core.get_modpath("minerland_fix_npc") .. "/guard.lua")
