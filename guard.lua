@@ -176,8 +176,8 @@ core.register_globalstep(function(dtime)
 						local ppos = player:get_pos()
 						local dir = vector.normalize(vector.subtract(ppos, gpos))
 						dir.y = 0
-						local hvel = vector.multiply(dir, 8)
-						player:add_velocity({x = hvel.x, y = 4, z = hvel.z})
+						local hvel = vector.multiply(dir, 15)
+						player:add_velocity({x = hvel.x, y = 12, z = hvel.z})
 						core.chat_send_player(pname,
 							"<" .. (obj.nametag or "Garde") .. "> Oses-tu m'attacher ?!")
 						-- reset après 3s
