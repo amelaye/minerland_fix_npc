@@ -34,6 +34,13 @@ local SKINS = {
 		"mobs_trader3.png",
 		"mobs_trader4.png",
 	},
+	["minerland_fix_npc:guard"] = {
+		"minerland_guard1.png",
+		"minerland_guard2.png",
+		"minerland_guard3.png",
+		"minerland_guard4.png",
+		"minerland_guard5.png",
+	},
 }
 
 -- contexte par joueur
@@ -203,10 +210,38 @@ local function wrap_rightclick(entity_name)
 	end
 end
 
+local QUEEN = "amelaye"
+
+local function wrap_rightclick_guard(entity_name)
+	local def = core.registered_entities[entity_name]
+	if not def then
+		core.log("warning", "minerland_fix_npc: " .. entity_name .. " introuvable")
+		return
+	end
+	local original_rightclick = def.on_rightclick
+	def.on_rightclick = function(self, clicker)
+		local item = clicker:get_wielded_item()
+		local pname = clicker:get_player_name()
+		if item:get_name() == stick and pname == QUEEN then
+			ensure_id(self)
+			context[pname] = {
+				npc_id = self.id,
+				entity_name = entity_name,
+			}
+			core.show_formspec(pname, "minerland_fix_npc:settings", get_formspec(self))
+			return
+		end
+		if original_rightclick then
+			return original_rightclick(self, clicker)
+		end
+	end
+end
+
 core.register_on_mods_loaded(function()
 	wrap_rightclick("mobs_npc:npc")
 	wrap_rightclick("mobs_npc:igor")
 	wrap_rightclick("mobs_npc:trader")
+	wrap_rightclick_guard("minerland_fix_npc:guard")
 end)
 
 -- garde

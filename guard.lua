@@ -5,8 +5,18 @@ local S = core.get_translator("minerland_fix_npc")
 local mcl = core.get_modpath("mcl_core") ~= nil
 
 local QUEEN = "amelaye"
-local GREET_DIST = 3   -- distance de salutation pour la reine
-local THREAT_DIST = 3  -- distance de menace pour les autres
+local GREET_DIST = 3
+local THREAT_DIST = 3
+
+-- état par garde : clé = object (weak), valeur = {greeted, threatened, bowing}
+local guard_states = setmetatable({}, {__mode = "k"})
+
+local function get_state(obj)
+	if not guard_states[obj] then
+		guard_states[obj] = {greeted = {}, threatened = {}, bowing = false}
+	end
+	return guard_states[obj]
+end
 
 mobs:register_mob("minerland_fix_npc:guard", {
 	description = S("Guard"),
@@ -73,10 +83,6 @@ mobs:register_mob("minerland_fix_npc:guard", {
 		return true, nil
 	end,
 
-	-- état interne
-	_greeted = {},
-	_threatened = {},
-
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
 		if puncher and puncher:is_player() then
 			local name = puncher:get_player_name()
@@ -84,75 +90,6 @@ mobs:register_mob("minerland_fix_npc:guard", {
 				self.attack_players = true
 				self.state = "attack"
 				self.attack = puncher
-			end
-		end
-	end,
-
-	on_step = function(self, dtime)
-
-		-- reste immobile
-		self:set_velocity(0)
-		self.order = "stand"
-
-		local pos = self.object:get_pos()
-		if not pos then return end
-
-		local players = core.get_connected_players()
-		for _, player in ipairs(players) do
-			local pname = player:get_player_name()
-			local ppos = player:get_pos()
-			if ppos then
-				local dist = vector.distance(pos, ppos)
-
-				if pname == QUEEN then
-					-- salutation de la reine
-					if dist <= GREET_DIST and not self._greeted[pname] then
-						self._greeted[pname] = true
-
-						-- s'accroupit
-						self.object:set_properties({
-							visual_size = {x=1, y=0.5},
-							collisionbox = {-0.35,-1.0,-0.35, 0.35,0.3,0.35},
-						})
-						core.chat_send_player(pname,
-							"<" .. (self.nametag or S("Guard")) .. "> " ..
-							S("Bonjour votre majesté !"))
-
-						-- se relève après 2s
-						local obj = self.object
-						core.after(2, function()
-							if obj and obj:get_pos() then
-								obj:set_properties({
-									visual_size = {x=1, y=1},
-									collisionbox = {-0.35,-1.0,-0.35, 0.35,0.8,0.35},
-								})
-							end
-						end)
-
-					elseif dist > GREET_DIST then
-						self._greeted[pname] = nil
-					end
-
-				else
-					-- menace les autres joueurs
-					if dist <= THREAT_DIST and not self._threatened[pname] then
-						self._threatened[pname] = true
-
-						self.object:set_properties({
-							wield_item = mcl and "mcl_tools:sword_diamond"
-								or "default:sword_diamond",
-						})
-						core.chat_send_player(pname,
-							"<" .. (self.nametag or S("Guard")) .. "> " ..
-							S("Halte ! Vous n'êtes pas autorisé ici !"))
-
-					elseif dist > THREAT_DIST then
-						if self._threatened[pname] then
-							self._threatened[pname] = nil
-							self.object:set_properties({wield_item = ""})
-						end
-					end
-				end
 			end
 		end
 	end,
@@ -169,6 +106,82 @@ mobs:register_mob("minerland_fix_npc:guard", {
 		end
 	end,
 })
+
+-- globalstep : détection de proximité indépendante de mobs_redo
+local timer = 0
+core.register_globalstep(function(dtime)
+	timer = timer + dtime
+	if timer < 0.5 then return end
+	timer = 0
+
+	local players = core.get_connected_players()
+
+	for _, obj in pairs(core.luaentities) do
+		if obj.name == "minerland_fix_npc:guard" and obj.object then
+			local pos = obj.object:get_pos()
+			if not pos then goto continue end
+
+			local state = get_state(obj.object)
+
+			for _, player in ipairs(players) do
+				local pname = player:get_player_name()
+				local ppos = player:get_pos()
+				if not ppos then goto next_player end
+
+				local dist = vector.distance(pos, ppos)
+
+				if pname == QUEEN then
+					if dist <= GREET_DIST and not state.greeted[pname] and not state.bowing then
+						state.greeted[pname] = true
+						state.bowing = true
+
+						-- s'accroupit
+						obj.object:set_properties({
+							visual_size = {x=1, y=0.5},
+						})
+						core.chat_send_player(pname,
+							"<" .. (obj.nametag or S("Guard")) .. "> " ..
+							S("Bonjour votre majesté !"))
+
+						-- se relève après 2s
+						local o = obj.object
+						local st = state
+						core.after(2, function()
+							if o and o:get_pos() then
+								o:set_properties({visual_size = {x=1, y=1}})
+							end
+							st.bowing = false
+						end)
+
+					elseif dist > GREET_DIST then
+						state.greeted[pname] = nil
+					end
+
+				else
+					if dist <= THREAT_DIST and not state.threatened[pname] then
+						state.threatened[pname] = true
+
+						obj.object:set_properties({
+							wield_item = mcl and "mcl_tools:sword_diamond"
+								or "default:sword_diamond",
+						})
+						core.chat_send_player(pname,
+							"<" .. (obj.nametag or S("Guard")) .. "> " ..
+							S("Halte ! Vous n'êtes pas autorisé ici !"))
+
+					elseif dist > THREAT_DIST and state.threatened[pname] then
+						state.threatened[pname] = nil
+						obj.object:set_properties({wield_item = ""})
+					end
+				end
+
+				::next_player::
+			end
+
+			::continue::
+		end
+	end
+end)
 
 -- spawn egg
 mobs:register_egg("minerland_fix_npc:guard", S("Guard"),
