@@ -215,6 +215,16 @@ core.register_globalstep(function(dtime)
 	end
 end)
 
+core.after(0, function()
+	if leads and leads.custom_leashable_entities then
+		leads.custom_leashable_entities["minerland_fix_npc:guard"] = false
+		core.log("action", "minerland_fix_npc: guard non-leashable set")
+	else
+		core.log("action", "minerland_fix_npc: leads introuvable !")
+	end
+end)
+
 -- spawn egg
 mobs:register_egg("minerland_fix_npc:guard", S("Guard"),
 	mcl and "mcl_core:iron_block.png" or "default_steel_block.png", 1)
+    
