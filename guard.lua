@@ -164,6 +164,16 @@ core.register_globalstep(function(dtime)
 
 				local dist = vector.distance(pos, ppos)
 
+				-- éjecte si le joueur tient une laisse et est proche
+				if player:get_wielded_item():get_name() == "leads:lead"
+				and dist <= 3 then
+					local dir = player:get_look_dir()
+					player:set_velocity({x=-dir.x*20, y=8, z=-dir.z*20})
+					core.chat_send_player(pname,
+						"<" .. (obj.nametag or "Garde") .. "> Oses-tu m'attacher ?!")
+					goto next_player
+				end
+
 				if pname == QUEEN then
 					if dist <= GREET_DIST and not state.greeted[pname] and not state.bowing then
 						state.greeted[pname] = true
@@ -224,12 +234,4 @@ core.register_on_mods_loaded(function()
 	if leads and leads.custom_leashable_entities then
 		leads.custom_leashable_entities["minerland_fix_npc:guard"] = false
 	end
-    if lead_def then
-        core.log("action", "leads:lead handlers: " .. dump({
-            on_use = lead_def.on_use ~= nil,
-            on_secondary_use = lead_def.on_secondary_use ~= nil,
-            on_rightclick = lead_def.on_rightclick ~= nil,
-            on_place = lead_def.on_place ~= nil,
-        }))
-    end
 end)
