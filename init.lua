@@ -256,6 +256,37 @@ core.register_on_mods_loaded(function()
 	wrap_rightclick("mobs_npc:igor")
 	wrap_rightclick("mobs_npc:trader")
 	wrap_rightclick_guard("minerland_fix_npc:guard")
+
+	-- éjection si on tente d'attacher une laisse sur un garde
+	local lead_def = core.registered_items["leads:lead"]
+	if not lead_def then return end
+
+	local original_use = lead_def.on_use
+	local original_secondary = lead_def.on_secondary_use
+
+	local function try_eject(user, pointed_thing)
+		if not pointed_thing or pointed_thing.type ~= "object" then return false end
+		local obj = pointed_thing.ref
+		if not obj then return false end
+		local ent = obj:get_luaentity()
+		if not ent or ent.name ~= "minerland_fix_npc:guard" then return false end
+		local dir = user:get_look_dir()
+		user:set_velocity({x = -dir.x * 20, y = 8, z = -dir.z * 20})
+		core.chat_send_player(user:get_player_name(),
+			"<" .. (ent.nametag or "Garde") .. "> Oses-tu m'attacher ?!")
+		return true
+	end
+
+	core.override_item("leads:lead", {
+		on_use = function(itemstack, user, pointed_thing)
+			if try_eject(user, pointed_thing) then return itemstack end
+			if original_use then return original_use(itemstack, user, pointed_thing) end
+		end,
+		on_secondary_use = function(itemstack, user, pointed_thing)
+			if try_eject(user, pointed_thing) then return itemstack end
+			if original_secondary then return original_secondary(itemstack, user, pointed_thing) end
+		end,
+	})
 end)
 
 -- garde
