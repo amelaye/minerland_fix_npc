@@ -167,11 +167,39 @@ core.register_globalstep(function(dtime)
 				-- éjecte si le joueur tient une laisse et est proche
 				if player:get_wielded_item():get_name() == "leads:lead"
 				and dist <= 3 then
-					local dir = player:get_look_dir()
-					player:set_velocity({x=-dir.x*20, y=8, z=-dir.z*20})
-					core.chat_send_player(pname,
-						"<" .. (obj.nametag or "Garde") .. "> Oses-tu m'attacher ?!")
+					if not state.lead_warned then
+						state.lead_warned = {}
+					end
+					if not state.lead_warned[pname] then
+						state.lead_warned[pname] = true
+						local gpos = obj.object:get_pos()
+						local ppos = player:get_pos()
+						local dir = vector.normalize(vector.subtract(ppos, gpos))
+						dir.y = 0
+						local hvel = vector.multiply(dir, 8)
+						player:add_velocity({x = hvel.x, y = 4, z = hvel.z})
+						core.chat_send_player(pname,
+							"<" .. (obj.nametag or "Garde") .. "> Oses-tu m'attacher ?!")
+						-- reset après 3s
+						core.after(3, function()
+							if state.lead_warned then
+								state.lead_warned[pname] = nil
+							end
+						end)
+					end
 					goto next_player
+				end
+				if state.lead_warned then
+					state.lead_warned[pname] = nil
+				end
+
+				-- se tourne vers tout joueur proche
+				if dist <= THREAT_DIST then
+					local gpos = obj.object:get_pos()
+					local ppos = player:get_pos()
+					local dir = vector.subtract(ppos, gpos)
+					local yaw = math.atan2(-dir.x, dir.z)
+					obj.object:set_yaw(yaw)
 				end
 
 				if pname == QUEEN then
