@@ -90,8 +90,8 @@ mobs:register_mob("minerland_fix_npc:guard", {
 		punch_start = 189, punch_end = 198,
 	},
 
-	-- leads : leashable=true pour que _leads_on_interact soit appelé
-	_leads_leashable = true,
+	-- leads : totalement non attachable
+	_leads_leashable = false,
 	_leads_immobile = true,
 
 	-- éjecte TOUT joueur qui tente d'attacher une laisse
@@ -215,16 +215,13 @@ core.register_globalstep(function(dtime)
 	end
 end)
 
-core.after(0, function()
-	if leads and leads.custom_leashable_entities then
-		leads.custom_leashable_entities["minerland_fix_npc:guard"] = false
-		core.log("action", "minerland_fix_npc: guard non-leashable set")
-	else
-		core.log("action", "minerland_fix_npc: leads introuvable !")
-	end
-end)
-
 -- spawn egg
 mobs:register_egg("minerland_fix_npc:guard", S("Guard"),
 	mcl and "mcl_core:iron_block.png" or "default_steel_block.png", 1)
-    
+
+-- bloque l'attachement via leads même par le owner
+core.register_on_mods_loaded(function()
+	if leads and leads.custom_leashable_entities then
+		leads.custom_leashable_entities["minerland_fix_npc:guard"] = false
+	end
+end)
