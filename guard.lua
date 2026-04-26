@@ -224,4 +224,12 @@ core.register_on_mods_loaded(function()
 	if leads and leads.custom_leashable_entities then
 		leads.custom_leashable_entities["minerland_fix_npc:guard"] = false
 	end
+    if lead_def then
+        core.log("action", "leads:lead handlers: " .. dump({
+            on_use = lead_def.on_use ~= nil,
+            on_secondary_use = lead_def.on_secondary_use ~= nil,
+            on_rightclick = lead_def.on_rightclick ~= nil,
+            on_place = lead_def.on_place ~= nil,
+        }))
+    end
 end)
