@@ -221,8 +221,22 @@ local function wrap_rightclick_guard(entity_name)
 	local original_rightclick = def.on_rightclick
 	def.on_rightclick = function(self, clicker)
 		local item = clicker:get_wielded_item()
+		local iname = item:get_name()
 		local pname = clicker:get_player_name()
-		if item:get_name() == stick and pname == QUEEN then
+
+		-- éjecte si le joueur tient une laisse
+		if iname == "leads:lead" or (core.registered_items[iname]
+		and core.registered_items[iname].groups
+		and core.registered_items[iname].groups.lead) then
+			local dir = clicker:get_look_dir()
+			clicker:set_velocity({x = -dir.x * 20, y = 8, z = -dir.z * 20})
+			core.chat_send_player(pname,
+				"<" .. (self.nametag or "Garde") .. "> " ..
+				"Oses-tu m'attacher ?!")
+			return
+		end
+
+		if iname == stick and pname == QUEEN then
 			ensure_id(self)
 			context[pname] = {
 				npc_id = self.id,
