@@ -18,6 +18,34 @@ local function get_state(obj)
 	return guard_states[obj]
 end
 
+-- lève les deux bras (révérence)
+local function bow(obj)
+	if obj.set_bone_override then
+		-- Luanti 5.9+
+		obj:set_bone_override("Arm_Right", {
+			rotation = {vec = vector.new(math.pi * 0.8, 0, 0), absolute = true}
+		})
+		obj:set_bone_override("Arm_Left", {
+			rotation = {vec = vector.new(math.pi * 0.8, 0, 0), absolute = true}
+		})
+	else
+		-- fallback ancien API
+		obj:set_bone_position("Arm_Right", vector.new(0,0,0), vector.new(-145, 0, 0))
+		obj:set_bone_position("Arm_Left",  vector.new(0,0,0), vector.new(-145, 0, 0))
+	end
+end
+
+-- remet les bras en position normale
+local function unbowarms(obj)
+	if obj.set_bone_override then
+		obj:set_bone_override("Arm_Right", {})
+		obj:set_bone_override("Arm_Left",  {})
+	else
+		obj:set_bone_position("Arm_Right", vector.new(0,0,0), vector.new(0, 0, 0))
+		obj:set_bone_position("Arm_Left",  vector.new(0,0,0), vector.new(0, 0, 0))
+	end
+end
+
 mobs:register_mob("minerland_fix_npc:guard", {
 	description = S("Guard"),
 	type = "npc",
@@ -66,7 +94,7 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	_leads_leashable = true,
 	_leads_immobile = true,
 
-	-- éjecte le joueur qui tente de l'attacher
+	-- éjecte TOUT joueur qui tente d'attacher une laisse
 	_leads_on_interact = function(self, itemstack, user, pointed_thing, is_punch)
 		if user and user:is_player() then
 			local pname = user:get_player_name()
@@ -107,7 +135,7 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	end,
 })
 
--- globalstep : détection de proximité indépendante de mobs_redo
+-- globalstep : détection de proximité + fix animation stand
 local timer = 0
 core.register_globalstep(function(dtime)
 	timer = timer + dtime
@@ -123,6 +151,12 @@ core.register_globalstep(function(dtime)
 
 			local state = get_state(obj.object)
 
+			-- fix animation stand : stoppe le mouvement si ordre = stand
+			if obj.order == "stand" and obj.state ~= "attack" then
+				obj:set_velocity(0)
+				obj:set_animation("stand")
+			end
+
 			for _, player in ipairs(players) do
 				local pname = player:get_player_name()
 				local ppos = player:get_pos()
@@ -135,20 +169,18 @@ core.register_globalstep(function(dtime)
 						state.greeted[pname] = true
 						state.bowing = true
 
-						-- s'accroupit
-						obj.object:set_properties({
-							visual_size = {x=1, y=0.5},
-						})
+						-- lève les bras
+						bow(obj.object)
 						core.chat_send_player(pname,
 							"<" .. (obj.nametag or S("Guard")) .. "> " ..
 							S("Bonjour votre majesté !"))
 
-						-- se relève après 2s
+						-- remet les bras après 2s
 						local o = obj.object
 						local st = state
 						core.after(2, function()
 							if o and o:get_pos() then
-								o:set_properties({visual_size = {x=1, y=1}})
+								unbowarms(o)
 							end
 							st.bowing = false
 						end)
