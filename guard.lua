@@ -28,7 +28,7 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	attack_npcs = false,
 	attack_players = false,
 	owner_loyal = true,
-	pathfinding = false,
+	pathfinding = true,
 	hp_min = 99999,
 	hp_max = 99999,
 	armor = {immortal = 1},
@@ -44,8 +44,8 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	},
 	makes_footstep_sound = true,
 	sounds = {},
-	walk_velocity = 0,
-	run_velocity = 0,
+	walk_velocity = 2,
+	run_velocity = 3,
 	drops = {},
 	water_damage = 0,
 	lava_damage = 0,
@@ -62,8 +62,8 @@ mobs:register_mob("minerland_fix_npc:guard", {
 		punch_start = 189, punch_end = 198,
 	},
 
-	-- leads : non attachable, non déplaçable
-	_leads_leashable = false,
+	-- leads : leashable=true pour que _leads_on_interact soit appelé
+	_leads_leashable = true,
 	_leads_immobile = true,
 
 	-- éjecte le joueur qui tente de l'attacher
