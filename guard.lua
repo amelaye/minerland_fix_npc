@@ -69,7 +69,7 @@ core.register_entity("minerland_fix_npc:taurus_visual", {
 		pointable = false,
 		visual = "wielditem",
 		textures = {"rangedweapons:taurus"},
-		visual_size = {x = 0.3, y = 0.3},
+		visual_size = {x = 0.15, y = 0.15},
 		is_visible = true,
 	},
 	on_activate = function(self, staticdata)
@@ -85,8 +85,8 @@ local function attach_taurus(guard_obj)
 	local ent = core.add_entity(guard_obj:get_pos(), "minerland_fix_npc:taurus_visual")
 	if not ent then return nil end
 	ent:set_attach(guard_obj, "Arm_Right",
-		{x = 0, y = 3, z = 3},   -- position dans le bone
-		{x = 90, y = 0, z = 90}  -- orientation
+		{x = 0, y = 4, z = 2},   -- position dans le bone
+		{x = 0, y = 90, z = 0}   -- orientation
 	)
 	return ent
 end
@@ -199,6 +199,30 @@ core.register_globalstep(function(dtime)
 			end
 		end
 
+		-- reset si aucun joueur proche
+		local any_threatened = false
+		local any_gun = false
+		for _, player in ipairs(players) do
+			local ppos = player:get_pos()
+			if ppos then
+				local dist = vector.distance(pos, ppos)
+				local wielded = player:get_wielded_item():get_name()
+				if dist <= THREAT_DIST then any_threatened = true end
+				if dist <= 10 and (wielded == "rangedweapons:taurus" or wielded == "rangedweapons:python") then
+					any_gun = true
+				end
+			end
+		end
+		if not any_threatened and not any_gun then
+			if state.taurus_ent then
+				detach_taurus(state.taurus_ent)
+				state.taurus_ent = nil
+				obj.object:set_bone_override("Arm_Right", {})
+			end
+			state.threatened = {}
+			state.gun_warned = {}
+		end
+
 		for _, player in ipairs(players) do
 			local pname = player:get_player_name()
 			local ppos  = player:get_pos()
@@ -215,7 +239,7 @@ core.register_globalstep(function(dtime)
 						state.taurus_ent = attach_taurus(obj.object)
 					end
 					obj.object:set_bone_override("Arm_Right", {
-						rotation = {vec = {x = 0.8, y = 0, z = 0}, interpolation = 0.15}
+						rotation = {vec = {x = 1.5708, y = 0, z = 0}, interpolation = 0.15}
 					})
 					core.chat_send_all("<" .. (obj.nametag or S("Guard")) .. "> HALTE !! Un terroriste !!!")
 					core.after(5, function()
@@ -298,7 +322,7 @@ core.register_globalstep(function(dtime)
 					state.threatened[pname] = true
 					state.taurus_ent = attach_taurus(obj.object)
 					obj.object:set_bone_override("Arm_Right", {
-						rotation = {vec = {x = 0.8, y = 0, z = 0}, interpolation = 0.15}
+						rotation = {vec = {x = 1.5708, y = 0, z = 0}, interpolation = 0.15}
 					})
 					core.chat_send_player(pname,
 						"<" .. (obj.nametag or S("Guard")) .. "> " ..
