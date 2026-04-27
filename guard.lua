@@ -86,7 +86,7 @@ local function attach_taurus(guard_obj)
 	if not ent then return nil end
 	ent:set_attach(guard_obj, "Arm_Right",
 		{x = 0, y = 6, z = 1},   -- position dans le bone
-		{x = 0, y = 0, z = 0}    -- orientation face caméra
+		{x = 0, y = 90, z = 0}   -- flip Y 90°
 	)
 	return ent
 end
