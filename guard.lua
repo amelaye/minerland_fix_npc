@@ -4,9 +4,9 @@
 local S = core.get_translator("minerland_fix_npc")
 local mcl = core.get_modpath("mcl_core") ~= nil
 
-local QUEEN = "amelaye"
-local GREET_DIST = 3
-local THREAT_DIST = 3
+local QUEEN = core.settings:get("minerland_guard_queen") or "amelaye"
+local GREET_DIST = tonumber(core.settings:get("minerland_guard_greet_dist")) or 3
+local THREAT_DIST = tonumber(core.settings:get("minerland_guard_threat_dist")) or 3
 
 -- état par garde : clé = object (weak), valeur = {greeted, threatened, bowing}
 local guard_states = setmetatable({}, {__mode = "k"})
@@ -172,18 +172,49 @@ core.register_globalstep(function(dtime)
 					end
 					if not state.lead_warned[pname] then
 						state.lead_warned[pname] = true
+
+						-- retire le fly temporairement
+						local privs = core.get_player_privs(pname)
+						local had_fly = privs.fly
+						if had_fly then
+							privs.fly = false
+							core.set_player_privs(pname, privs)
+						end
+
+						-- éjection
 						local gpos = obj.object:get_pos()
 						local ppos = player:get_pos()
 						local dir = vector.normalize(vector.subtract(ppos, gpos))
 						dir.y = 0
 						local hvel = vector.multiply(dir, 15)
 						player:add_velocity({x = hvel.x, y = 12, z = hvel.z})
+
+						-- coup de pied
+						local o = obj.object
+						o:set_bone_override("Leg_Right", {
+							rotation = {vec = {x = -1.0, y = 0, z = 0}, interpolation = 0.1}
+						})
+						core.after(0.5, function()
+							if o and o:get_pos() then
+								o:set_bone_override("Leg_Right", {
+									rotation = {vec = {x = 0, y = 0, z = 0}, interpolation = 0.2}
+								})
+							end
+						end)
+
 						core.chat_send_player(pname,
 							"<" .. (obj.nametag or "Garde") .. "> Oses-tu m'attacher ?!")
+
 						-- reset après 3s
 						core.after(3, function()
 							if state.lead_warned then
 								state.lead_warned[pname] = nil
+							end
+							-- remet le fly
+							if had_fly then
+								local p = privs
+								p.fly = true
+								core.set_player_privs(pname, p)
 							end
 						end)
 					end
@@ -256,6 +287,48 @@ end)
 -- spawn egg
 mobs:register_egg("minerland_fix_npc:guard", S("Guard"),
 	mcl and "mcl_core:iron_block.png" or "default_steel_block.png", 1)
+
+-- réserve l'oeuf aux admins (priv server)
+core.register_on_mods_loaded(function()
+	local egg_def = core.registered_items["minerland_fix_npc:guard"]
+	if not egg_def then return end
+
+	core.override_item("minerland_fix_npc:guard", {
+		on_place = function(itemstack, placer, pointed_thing)
+			if not placer or not placer:is_player() then return end
+			if not core.check_player_privs(placer, {server = true}) then
+				core.chat_send_player(placer:get_player_name(),
+					S("Vous n'avez pas la permission d'invoquer un garde."))
+				-- éjecte le joueur
+				local privs = core.get_player_privs(placer:get_player_name())
+				local had_fly = privs.fly
+				if had_fly then
+					privs.fly = false
+					core.set_player_privs(placer:get_player_name(), privs)
+				end
+				local dir = placer:get_look_dir()
+				dir.y = 0
+				local hvel = vector.multiply(vector.normalize(dir), -15)
+				placer:add_velocity({x = hvel.x, y = 12, z = hvel.z})
+				core.after(3, function()
+					if had_fly then
+						privs.fly = true
+						core.set_player_privs(placer:get_player_name(), privs)
+					end
+				end)
+				return itemstack
+			end
+			local pos = core.get_pointed_thing_position(pointed_thing, true)
+			if pos then
+				core.add_entity(pos, "minerland_fix_npc:guard")
+				if not core.is_creative_enabled(placer:get_player_name()) then
+					itemstack:take_item()
+				end
+			end
+			return itemstack
+		end
+	})
+end)
 
 -- bloque l'attachement via leads même par le owner
 core.register_on_mods_loaded(function()

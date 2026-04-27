@@ -1,0 +1,5 @@
+minerland_guard_queen (Nom du joueur salué par les gardes) string amelaye
+
+minerland_guard_greet_dist (Distance de salutation de la reine en blocs) int 3 1 20
+
+minerland_guard_threat_dist (Distance de menace envers les autres joueurs en blocs) int 3 1 20
