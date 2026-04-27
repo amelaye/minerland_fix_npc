@@ -175,14 +175,16 @@ core.register_globalstep(function(dtime)
 			if dist <= 10 and (wielded == "rangedweapons:taurus" or wielded == "rangedweapons:python") then
 				if not state.gun_warned[pname] then
 					state.gun_warned[pname] = true
-					-- brandit le taurus
 					obj.object:set_properties({wield_item = "rangedweapons:taurus"})
+					obj.object:set_bone_override("Arm_Right", {
+						rotation = {vec = {x = -0.8, y = 0, z = 0}, interpolation = 0.15}
+					})
 					core.chat_send_all("<" .. (obj.nametag or S("Guard")) .. "> HALTE !! Un terroriste !!!")
 					core.after(5, function()
 						if state.gun_warned then
 							state.gun_warned[pname] = nil
-							-- rengaine si plus personne armé
 							obj.object:set_properties({wield_item = ""})
+							obj.object:set_bone_override("Arm_Right", {})
 						end
 					end)
 				end
@@ -190,6 +192,7 @@ core.register_globalstep(function(dtime)
 				if state.gun_warned[pname] then
 					state.gun_warned[pname] = nil
 					obj.object:set_properties({wield_item = ""})
+					obj.object:set_bone_override("Arm_Right", {})
 				end
 			end
 
@@ -249,8 +252,9 @@ core.register_globalstep(function(dtime)
 				-- menace
 				if dist <= THREAT_DIST and not state.threatened[pname] then
 					state.threatened[pname] = true
-					obj.object:set_properties({
-						wield_item = mcl and "mcl_tools:sword_diamond" or "default:sword_diamond",
+					obj.object:set_properties({wield_item = "rangedweapons:taurus"})
+					obj.object:set_bone_override("Arm_Right", {
+						rotation = {vec = {x = -0.8, y = 0, z = 0}, interpolation = 0.15}
 					})
 					core.chat_send_player(pname,
 						"<" .. (obj.nametag or S("Guard")) .. "> " ..
@@ -258,6 +262,7 @@ core.register_globalstep(function(dtime)
 				elseif dist > THREAT_DIST and state.threatened[pname] then
 					state.threatened[pname] = nil
 					obj.object:set_properties({wield_item = ""})
+					obj.object:set_bone_override("Arm_Right", {})
 				end
 			end
 
