@@ -175,13 +175,22 @@ core.register_globalstep(function(dtime)
 			if dist <= 10 and (wielded == "rangedweapons:taurus" or wielded == "rangedweapons:python") then
 				if not state.gun_warned[pname] then
 					state.gun_warned[pname] = true
+					-- brandit le taurus
+					obj.object:set_properties({wield_item = "rangedweapons:taurus"})
 					core.chat_send_all("<" .. (obj.nametag or S("Guard")) .. "> HALTE !! Un terroriste !!!")
 					core.after(5, function()
-						if state.gun_warned then state.gun_warned[pname] = nil end
+						if state.gun_warned then
+							state.gun_warned[pname] = nil
+							-- rengaine si plus personne armé
+							obj.object:set_properties({wield_item = ""})
+						end
 					end)
 				end
 			else
-				state.gun_warned[pname] = nil
+				if state.gun_warned[pname] then
+					state.gun_warned[pname] = nil
+					obj.object:set_properties({wield_item = ""})
+				end
 			end
 
 			-- éjection laisse
