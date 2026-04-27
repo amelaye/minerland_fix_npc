@@ -158,10 +158,12 @@ core.register_globalstep(function(dtime)
 
 			local state = get_state(obj.object)
 
-			-- fix animation stand : stoppe le mouvement si ordre = stand
-			if obj.order == "stand" and obj.state ~= "attack" then
-				obj:set_velocity(0)
-				obj:set_animation("stand")
+			-- force vélocité zéro sauf en follow
+			if obj.order ~= "follow" then
+				obj.object:set_velocity({x = 0, y = 0, z = 0})
+				if obj.order == "stand" then
+					obj:set_animation("stand")
+				end
 			end
 
 			-- détection revolver dans un rayon de 10 blocs
