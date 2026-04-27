@@ -61,6 +61,42 @@ local function eject(player, pname, gpos)
 	end)
 end
 
+-- entité visuelle du taurus attachée au bras
+core.register_entity("minerland_fix_npc:taurus_visual", {
+	initial_properties = {
+		physical = false,
+		collide_with_objects = false,
+		pointable = false,
+		visual = "wielditem",
+		textures = {"rangedweapons:taurus"},
+		visual_size = {x = 0.3, y = 0.3},
+		is_visible = true,
+	},
+	on_activate = function(self, staticdata)
+		local data = core.deserialize(staticdata) or {}
+		if data.remove then self.object:remove() end
+	end,
+	get_staticdata = function(self)
+		return core.serialize({remove = true})
+	end,
+})
+
+local function attach_taurus(guard_obj)
+	local ent = core.add_entity(guard_obj:get_pos(), "minerland_fix_npc:taurus_visual")
+	if not ent then return nil end
+	ent:set_attach(guard_obj, "Arm_Right",
+		{x = 0, y = 3, z = 3},   -- position dans le bone
+		{x = 90, y = 0, z = 90}  -- orientation
+	)
+	return ent
+end
+
+local function detach_taurus(taurus_ent)
+	if taurus_ent and taurus_ent:get_pos() then
+		taurus_ent:remove()
+	end
+end
+
 mobs:register_mob("minerland_fix_npc:guard", {
 	description = S("Guard"),
 	type = "npc",
@@ -175,24 +211,32 @@ core.register_globalstep(function(dtime)
 			if dist <= 10 and (wielded == "rangedweapons:taurus" or wielded == "rangedweapons:python") then
 				if not state.gun_warned[pname] then
 					state.gun_warned[pname] = true
-					obj.object:set_properties({wield_item = "rangedweapons:taurus"})
+					if not state.taurus_ent then
+						state.taurus_ent = attach_taurus(obj.object)
+					end
 					obj.object:set_bone_override("Arm_Right", {
-						rotation = {vec = {x = -0.8, y = 0, z = 0}, interpolation = 0.15}
+						rotation = {vec = {x = 0.8, y = 0, z = 0}, interpolation = 0.15}
 					})
 					core.chat_send_all("<" .. (obj.nametag or S("Guard")) .. "> HALTE !! Un terroriste !!!")
 					core.after(5, function()
 						if state.gun_warned then
 							state.gun_warned[pname] = nil
-							obj.object:set_properties({wield_item = ""})
-							obj.object:set_bone_override("Arm_Right", {})
+							if not next(state.threatened) then
+								detach_taurus(state.taurus_ent)
+								state.taurus_ent = nil
+								obj.object:set_bone_override("Arm_Right", {})
+							end
 						end
 					end)
 				end
 			else
 				if state.gun_warned[pname] then
 					state.gun_warned[pname] = nil
-					obj.object:set_properties({wield_item = ""})
-					obj.object:set_bone_override("Arm_Right", {})
+					if not next(state.threatened) then
+						detach_taurus(state.taurus_ent)
+						state.taurus_ent = nil
+						obj.object:set_bone_override("Arm_Right", {})
+					end
 				end
 			end
 
@@ -252,16 +296,17 @@ core.register_globalstep(function(dtime)
 				-- menace
 				if dist <= THREAT_DIST and not state.threatened[pname] then
 					state.threatened[pname] = true
-					obj.object:set_properties({wield_item = "rangedweapons:taurus"})
+					state.taurus_ent = attach_taurus(obj.object)
 					obj.object:set_bone_override("Arm_Right", {
-						rotation = {vec = {x = -0.8, y = 0, z = 0}, interpolation = 0.15}
+						rotation = {vec = {x = 0.8, y = 0, z = 0}, interpolation = 0.15}
 					})
 					core.chat_send_player(pname,
 						"<" .. (obj.nametag or S("Guard")) .. "> " ..
 						S("Halte ! Vous n'êtes pas autorisé ici !"))
 				elseif dist > THREAT_DIST and state.threatened[pname] then
 					state.threatened[pname] = nil
-					obj.object:set_properties({wield_item = ""})
+					detach_taurus(state.taurus_ent)
+					state.taurus_ent = nil
 					obj.object:set_bone_override("Arm_Right", {})
 				end
 			end
