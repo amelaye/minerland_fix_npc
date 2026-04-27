@@ -86,7 +86,7 @@ local function attach_taurus(guard_obj)
 	if not ent then return nil end
 	ent:set_attach(guard_obj, "Arm_Right",
 		{x = 0, y = 5, z = 2},
-		{x = -30, y = 270, z = 0}
+		{x = 0, y = 240, z = 0}
 	)
 	return ent
 end
