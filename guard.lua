@@ -112,6 +112,13 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	end,
 
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
+		-- annule toute projection
+		self.object:set_velocity({x = 0, y = 0, z = 0})
+		core.after(0.05, function()
+			if self.object and self.object:get_pos() then
+				self.object:set_velocity({x = 0, y = 0, z = 0})
+			end
+		end)
 		if puncher and puncher:is_player() then
 			local name = puncher:get_player_name()
 			if name ~= QUEEN then
@@ -157,6 +164,32 @@ core.register_globalstep(function(dtime)
 				obj:set_animation("stand")
 			end
 
+			-- détection revolver dans un rayon de 10 blocs
+			if not state.gun_warned then
+				state.gun_warned = {}
+			end
+			for _, player in ipairs(players) do
+				local pname = player:get_player_name()
+				local ppos = player:get_pos()
+				if ppos then
+					local dist = vector.distance(pos, ppos)
+					local wielded = player:get_wielded_item():get_name()
+					if dist <= 10 and (wielded == "rangedweapons:taurus" or wielded == "rangedweapons:python") then
+						if not state.gun_warned[pname] then
+							state.gun_warned[pname] = true
+							core.chat_send_all("<" .. (obj.nametag or S("Guard")) .. "> HALTE !! Un terroriste !!!")
+							core.after(5, function()
+								if state.gun_warned then
+									state.gun_warned[pname] = nil
+								end
+							end)
+						end
+					else
+						state.gun_warned[pname] = nil
+					end
+				end
+			end
+
 			for _, player in ipairs(players) do
 				local pname = player:get_player_name()
 				local ppos = player:get_pos()
@@ -192,7 +225,7 @@ core.register_globalstep(function(dtime)
 						-- coup de pied
 						local o = obj.object
 						o:set_bone_override("Leg_Right", {
-							rotation = {vec = {x = 2.5, y = 0, z = 0}, interpolation = 0.1}
+							rotation = {vec = {x = -1.0, y = 0, z = 0}, interpolation = 0.1}
 						})
 						core.after(0.5, function()
 							if o and o:get_pos() then
