@@ -69,7 +69,7 @@ core.register_entity("minerland_fix_npc:taurus_visual", {
 		pointable = false,
 		visual = "wielditem",
 		textures = {"rangedweapons:taurus"},
-		visual_size = {x = 0.10, y = 0.10},
+		visual_size = {x = 0.13, y = 0.13},
 		is_visible = true,
 	},
 	on_activate = function(self, staticdata)
