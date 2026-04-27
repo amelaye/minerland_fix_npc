@@ -69,7 +69,7 @@ core.register_entity("minerland_fix_npc:taurus_visual", {
 		pointable = false,
 		visual = "wielditem",
 		textures = {"rangedweapons:taurus"},
-		visual_size = {x = 0.15, y = 0.15},
+		visual_size = {x = 0.10, y = 0.10},
 		is_visible = true,
 	},
 	on_activate = function(self, staticdata)
@@ -85,8 +85,8 @@ local function attach_taurus(guard_obj)
 	local ent = core.add_entity(guard_obj:get_pos(), "minerland_fix_npc:taurus_visual")
 	if not ent then return nil end
 	ent:set_attach(guard_obj, "Arm_Right",
-		{x = 0, y = 6, z = 1},   -- position dans le bone
-		{x = 0, y = 270, z = 0}   -- flip Y 90°
+		{x = 0, y = 5, z = 2},
+		{x = -30, y = 270, z = 0}
 	)
 	return ent
 end
@@ -145,12 +145,10 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	_leads_immobile  = true,
 
 	_leads_on_interact = function(self, itemstack, user, pointed_thing, is_punch)
-		-- géré dans le globalstep
 		return true, nil
 	end,
 
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
-		-- annule toute projection
 		self.object:set_velocity({x = 0, y = 0, z = 0})
 		if puncher and puncher:is_player() then
 			local name = puncher:get_player_name()
@@ -191,7 +189,7 @@ core.register_globalstep(function(dtime)
 
 		local state = get_state(obj.object)
 
-		-- force immobilité (contrecarre rangedweapons knockback)
+		-- force immobilité
 		if obj.order ~= "follow" then
 			obj.object:set_velocity({x = 0, y = 0, z = 0})
 			if obj.order == "stand" then
@@ -269,7 +267,6 @@ core.register_globalstep(function(dtime)
 				if not state.lead_warned[pname] then
 					state.lead_warned[pname] = true
 					eject(player, pname, pos)
-					-- coup de pied
 					obj.object:set_bone_override("Leg_Right", {
 						rotation = {vec = {x = 1.0, y = 0, z = 0}, interpolation = 0.1}
 					})
@@ -292,7 +289,7 @@ core.register_globalstep(function(dtime)
 				state.lead_warned[pname] = nil
 			end
 
-			-- rotation vers tout joueur proche (amelaye incluse)
+			-- rotation vers tout joueur proche
 			if dist <= math.max(THREAT_DIST, GREET_DIST) then
 				local dir = vector.subtract(ppos, pos)
 				obj.object:set_yaw(math.atan2(-dir.x, dir.z))
