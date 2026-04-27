@@ -59,7 +59,7 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	pathfinding = true,
 	hp_min = 99999,
 	hp_max = 99999,
-	armor = {immortal = 1},
+	armor = {immortal = 1, fleshy = 0},
 	collisionbox = {-0.35,-1.0,-0.35, 0.35,0.8,0.35},
 	visual = "mesh",
 	mesh = "mobs_character.b3d",
