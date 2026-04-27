@@ -197,7 +197,7 @@ core.register_globalstep(function(dtime)
 						core.after(0.5, function()
 							if o and o:get_pos() then
 								o:set_bone_override("Leg_Right", {
-									rotation = {vec = {x = 1.0, y = 0, z = 0}, interpolation = 0.1}
+									rotation = {vec = {x = 0, y = 0, z = 0}, interpolation = 0.2}
 								})
 							end
 						end)
