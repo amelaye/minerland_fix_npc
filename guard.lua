@@ -85,8 +85,8 @@ local function attach_taurus(guard_obj)
 	local ent = core.add_entity(guard_obj:get_pos(), "minerland_fix_npc:taurus_visual")
 	if not ent then return nil end
 	ent:set_attach(guard_obj, "Arm_Right",
-		{x = 0, y = 4, z = 2},   -- position dans le bone
-		{x = 0, y = 90, z = 0}   -- orientation
+		{x = 0, y = 3, z = -3},  -- position dans le bone
+		{x = 0, y = 0, z = 90}   -- orientation
 	)
 	return ent
 end
@@ -292,8 +292,8 @@ core.register_globalstep(function(dtime)
 				state.lead_warned[pname] = nil
 			end
 
-			-- rotation vers le joueur proche
-			if dist <= THREAT_DIST then
+			-- rotation vers tout joueur proche (amelaye incluse)
+			if dist <= math.max(THREAT_DIST, GREET_DIST) then
 				local dir = vector.subtract(ppos, pos)
 				obj.object:set_yaw(math.atan2(-dir.x, dir.z))
 			end
