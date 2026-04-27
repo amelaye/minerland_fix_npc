@@ -85,8 +85,8 @@ local function attach_taurus(guard_obj)
 	local ent = core.add_entity(guard_obj:get_pos(), "minerland_fix_npc:taurus_visual")
 	if not ent then return nil end
 	ent:set_attach(guard_obj, "Arm_Right",
-		{x = 0, y = 3, z = -3},  -- position dans le bone
-		{x = 0, y = 0, z = 90}   -- orientation
+		{x = 0, y = 6, z = 1},   -- position dans le bone
+		{x = 0, y = 0, z = 0}    -- orientation face caméra
 	)
 	return ent
 end
