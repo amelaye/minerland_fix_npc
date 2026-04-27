@@ -86,7 +86,7 @@ local function attach_taurus(guard_obj)
 	if not ent then return nil end
 	ent:set_attach(guard_obj, "Arm_Right",
 		{x = 0, y = 6, z = 1},   -- position dans le bone
-		{x = 0, y = 90, z = 0}   -- flip Y 90°
+		{x = 180, y = 90, z = 0} -- orientation flip vertical
 	)
 	return ent
 end
@@ -145,12 +145,10 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	_leads_immobile  = true,
 
 	_leads_on_interact = function(self, itemstack, user, pointed_thing, is_punch)
-		-- géré dans le globalstep
 		return true, nil
 	end,
 
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
-		-- annule toute projection
 		self.object:set_velocity({x = 0, y = 0, z = 0})
 		if puncher and puncher:is_player() then
 			local name = puncher:get_player_name()
@@ -269,7 +267,6 @@ core.register_globalstep(function(dtime)
 				if not state.lead_warned[pname] then
 					state.lead_warned[pname] = true
 					eject(player, pname, pos)
-					-- coup de pied
 					obj.object:set_bone_override("Leg_Right", {
 						rotation = {vec = {x = 1.0, y = 0, z = 0}, interpolation = 0.1}
 					})
