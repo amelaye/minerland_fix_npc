@@ -192,7 +192,7 @@ core.register_globalstep(function(dtime)
 						-- coup de pied
 						local o = obj.object
 						o:set_bone_override("Leg_Right", {
-							rotation = {vec = {x = 1.0, y = 0, z = 0}, interpolation = 0.1}
+							rotation = {vec = {x = 2.5, y = 0, z = 0}, interpolation = 0.1}
 						})
 						core.after(0.5, function()
 							if o and o:get_pos() then
