@@ -69,7 +69,7 @@ core.register_entity("minerland_fix_npc:taurus_visual", {
 		pointable = false,
 		visual = "wielditem",
 		textures = {"rangedweapons:taurus"},
-		visual_size = {x = 0.15, y = 0.15},
+		visual_size = {x = 0.20, y = 0.20},
 		is_visible = true,
 	},
 	on_activate = function(self, staticdata)
@@ -95,6 +95,83 @@ local function detach_taurus(taurus_ent)
 	if taurus_ent and taurus_ent:get_pos() then
 		taurus_ent:remove()
 	end
+end
+
+-- projectile maison tiré par le garde
+core.register_entity("minerland_fix_npc:guard_bullet", {
+	initial_properties = {
+		physical = true,
+		collide_with_objects = true,
+		pointable = false,
+		visual = "wielditem",
+		textures = {"rangedweapons:shot_bullet_visual"},
+		visual_size = {x = 0.1, y = 0.1},
+		collisionbox = {-0.05, -0.05, -0.05, 0.05, 0.05, 0.05},
+		is_visible = true,
+	},
+	_damage = 14,
+	_timer = 0,
+	on_activate = function(self, staticdata)
+		local data = core.deserialize(staticdata) or {}
+		if data.remove then self.object:remove() end
+	end,
+	get_staticdata = function(self)
+		return core.serialize({remove = true})
+	end,
+	on_step = function(self, dtime)
+		self._timer = (self._timer or 0) + dtime
+		if self._timer > 3 then
+			self.object:remove()
+			return
+		end
+		-- détecte collision avec joueur
+		local pos = self.object:get_pos()
+		if not pos then return end
+		local objs = core.get_objects_inside_radius(pos, 0.5)
+		for _, obj in ipairs(objs) do
+			if obj:is_player() then
+				local pname = obj:get_player_name()
+				-- dégâts directs
+				obj:set_hp(math.max(0, obj:get_hp() - self._damage))
+				-- éjection
+				local vel = self.object:get_velocity()
+				if vel then
+					local dir = vector.normalize(vel)
+					obj:add_velocity({x=dir.x*5, y=3, z=dir.z*5})
+				end
+				core.sound_play("rangedweapons_deagle", {pos=pos, gain=0.5}, true)
+				self.object:remove()
+				return
+			end
+		end
+	end,
+})
+
+local function fire_bullet(guard_obj, target_player)
+	local gpos = guard_obj:get_pos()
+	if not gpos then return end
+	local ppos = target_player:get_pos()
+	if not ppos then return end
+
+	gpos.y = gpos.y + 0.8
+	local dir = vector.normalize(vector.subtract(ppos, gpos))
+
+	local bullet = core.add_entity(gpos, "minerland_fix_npc:guard_bullet")
+	if bullet then
+		bullet:set_velocity(vector.multiply(dir, 50))
+		bullet:set_acceleration({x=0, y=-1, z=0})
+	end
+	core.sound_play("rangedweapons_deagle", {pos=gpos, gain=1.0, max_hear_distance=50}, true)
+end
+
+local function raise_arm(obj)
+	obj:set_bone_override("Arm_Right", {
+		rotation = {vec = {x = 1.5708, y = 0, z = 0}, interpolation = 0.15}
+	})
+end
+
+local function lower_arm(obj)
+	obj:set_bone_override("Arm_Right", {})
 end
 
 mobs:register_mob("minerland_fix_npc:guard", {
@@ -149,6 +226,7 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	end,
 
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
+		-- annule toute projection
 		self.object:set_velocity({x = 0, y = 0, z = 0})
 		if puncher and puncher:is_player() then
 			local pname = puncher:get_player_name()
@@ -157,65 +235,20 @@ mobs:register_mob("minerland_fix_npc:guard", {
 				self.state = "attack"
 				self.attack = puncher
 
+				-- attache le taurus et lève le bras
+				local state = get_state(self.object)
+				if not state.taurus_ent then
+					state.taurus_ent = attach_taurus(self.object)
+				end
+				raise_arm(self.object)
+
 				-- rafale de 6 coups
 				local gobj = self.object
 				for i = 1, 6 do
 					core.after(i * 0.3, function()
 						if not gobj or not gobj:get_pos() then return end
 						if not puncher or not puncher:get_pos() then return end
-
-						local gpos = gobj:get_pos()
-						local ppos = puncher:get_pos()
-						gpos.y = gpos.y + 0.8 -- hauteur bras
-
-						local shoot_dir = vector.normalize(vector.subtract(ppos, gpos))
-
-						-- lance le projectile
-						if rangedweapons_launch_projectile then
-							-- on crée un faux objet "player-like" avec position et direction
-							local fake = {
-								get_pos = function() return gpos end,
-								get_look_dir = function() return shoot_dir end,
-								get_look_horizontal = function()
-									return math.atan2(-shoot_dir.x, shoot_dir.z)
-								end,
-								get_look_vertical = function()
-									return -math.asin(shoot_dir.y)
-								end,
-								get_player_name = function() return "guard" end,
-								get_meta = function()
-									return {
-										get_float = function() return 0 end,
-										set_float = function() end,
-										get_int = function() return 300 end,
-									}
-								end,
-							}
-
-							rangedweapons_launch_projectile(
-								fake, 1,
-								{fleshy = 14, knockback = 8},
-								"rangedweapons:shot_bullet",
-								"wielditem",
-								"rangedweapons:shot_bullet_visual",
-								"rangedweapons_deagle",
-								55, 97, 1,
-								function() end,
-								0, 0, 0, 0, 0,
-								"", "", "",
-								0, 0, 0, 0, nil, 0, 0,
-								0.0025, 0, 0, 20
-							)
-						end
-
-						-- éjection du joueur
-						local edir = vector.normalize(vector.subtract(ppos, gpos))
-						edir.y = 0
-						puncher:add_velocity({
-							x = edir.x * 5,
-							y = 3,
-							z = edir.z * 5,
-						})
+						fire_bullet(gobj, puncher)
 					end)
 				end
 			end
@@ -251,12 +284,10 @@ core.register_globalstep(function(dtime)
 
 		local state = get_state(obj.object)
 
-		-- force immobilité
-		if obj.order ~= "follow" then
-			obj.object:set_velocity({x = 0, y = 0, z = 0})
-			if obj.order == "stand" then
-				obj:set_animation("stand")
-			end
+		-- force immobilité + annule knockback
+		obj.object:set_velocity({x = 0, y = 0, z = 0})
+		if obj.order == "stand" then
+			obj:set_animation("stand")
 		end
 
 		-- reset si aucun joueur proche
@@ -277,7 +308,7 @@ core.register_globalstep(function(dtime)
 			if state.taurus_ent then
 				detach_taurus(state.taurus_ent)
 				state.taurus_ent = nil
-				obj.object:set_bone_override("Arm_Right", {})
+				lower_arm(obj.object)
 			end
 			state.threatened = {}
 			state.gun_warned = {}
@@ -298,29 +329,17 @@ core.register_globalstep(function(dtime)
 					if not state.taurus_ent then
 						state.taurus_ent = attach_taurus(obj.object)
 					end
-					obj.object:set_bone_override("Arm_Right", {
-						rotation = {vec = {x = 1.3, y = 0, z = 0}, interpolation = 0.15}
-					})
+					raise_arm(obj.object)
 					core.chat_send_all("<" .. (obj.nametag or S("Guard")) .. "> HALTE !! Un terroriste !!!")
 					core.after(5, function()
 						if state.gun_warned then
 							state.gun_warned[pname] = nil
-							if not next(state.threatened) then
-								detach_taurus(state.taurus_ent)
-								state.taurus_ent = nil
-								obj.object:set_bone_override("Arm_Right", {})
-							end
 						end
 					end)
 				end
 			else
 				if state.gun_warned[pname] then
 					state.gun_warned[pname] = nil
-					if not next(state.threatened) then
-						detach_taurus(state.taurus_ent)
-						state.taurus_ent = nil
-						obj.object:set_bone_override("Arm_Right", {})
-					end
 				end
 			end
 
@@ -379,18 +398,20 @@ core.register_globalstep(function(dtime)
 				-- menace
 				if dist <= THREAT_DIST and not state.threatened[pname] then
 					state.threatened[pname] = true
-					state.taurus_ent = attach_taurus(obj.object)
-					obj.object:set_bone_override("Arm_Right", {
-						rotation = {vec = {x = 1.3, y = 0, z = 0}, interpolation = 0.15}
-					})
+					if not state.taurus_ent then
+						state.taurus_ent = attach_taurus(obj.object)
+					end
+					raise_arm(obj.object)
 					core.chat_send_player(pname,
 						"<" .. (obj.nametag or S("Guard")) .. "> " ..
 						S("Halte ! Vous n'êtes pas autorisé ici !"))
 				elseif dist > THREAT_DIST and state.threatened[pname] then
 					state.threatened[pname] = nil
-					detach_taurus(state.taurus_ent)
-					state.taurus_ent = nil
-					obj.object:set_bone_override("Arm_Right", {})
+					if not any_gun then
+						detach_taurus(state.taurus_ent)
+						state.taurus_ent = nil
+						lower_arm(obj.object)
+					end
 				end
 			end
 
