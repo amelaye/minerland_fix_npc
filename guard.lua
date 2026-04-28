@@ -69,7 +69,7 @@ core.register_entity("minerland_fix_npc:taurus_visual", {
 		pointable = false,
 		visual = "wielditem",
 		textures = {"rangedweapons:taurus"},
-		visual_size = {x = 0.10, y = 0.10},
+		visual_size = {x = 0.15, y = 0.15},
 		is_visible = true,
 	},
 	on_activate = function(self, staticdata)
@@ -86,7 +86,7 @@ local function attach_taurus(guard_obj)
 	if not ent then return nil end
 	ent:set_attach(guard_obj, "Arm_Right",
 		{x = 0, y = 6, z = 1},
-		{x = -30, y = 270, z = 0}
+		{x = 0, y = 270, z = 0}
 	)
 	return ent
 end
