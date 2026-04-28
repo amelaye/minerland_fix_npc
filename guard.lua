@@ -69,7 +69,7 @@ core.register_entity("minerland_fix_npc:taurus_visual", {
 		pointable = false,
 		visual = "wielditem",
 		textures = {"rangedweapons:taurus"},
-		visual_size = {x = 0.13, y = 0.13},
+		visual_size = {x = 0.10, y = 0.10},
 		is_visible = true,
 	},
 	on_activate = function(self, staticdata)
@@ -86,7 +86,7 @@ local function attach_taurus(guard_obj)
 	if not ent then return nil end
 	ent:set_attach(guard_obj, "Arm_Right",
 		{x = 0, y = 6, z = 1},
-		{x = 0, y = 270, z = 0}
+		{x = -30, y = 270, z = 0}
 	)
 	return ent
 end
@@ -151,11 +151,73 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
 		self.object:set_velocity({x = 0, y = 0, z = 0})
 		if puncher and puncher:is_player() then
-			local name = puncher:get_player_name()
-			if name ~= QUEEN then
+			local pname = puncher:get_player_name()
+			if pname ~= QUEEN then
 				self.attack_players = true
 				self.state = "attack"
 				self.attack = puncher
+
+				-- rafale de 6 coups
+				local gobj = self.object
+				for i = 1, 6 do
+					core.after(i * 0.3, function()
+						if not gobj or not gobj:get_pos() then return end
+						if not puncher or not puncher:get_pos() then return end
+
+						local gpos = gobj:get_pos()
+						local ppos = puncher:get_pos()
+						gpos.y = gpos.y + 0.8 -- hauteur bras
+
+						local shoot_dir = vector.normalize(vector.subtract(ppos, gpos))
+
+						-- lance le projectile
+						if rangedweapons_launch_projectile then
+							-- on crée un faux objet "player-like" avec position et direction
+							local fake = {
+								get_pos = function() return gpos end,
+								get_look_dir = function() return shoot_dir end,
+								get_look_horizontal = function()
+									return math.atan2(-shoot_dir.x, shoot_dir.z)
+								end,
+								get_look_vertical = function()
+									return -math.asin(shoot_dir.y)
+								end,
+								get_player_name = function() return "guard" end,
+								get_meta = function()
+									return {
+										get_float = function() return 0 end,
+										set_float = function() end,
+										get_int = function() return 300 end,
+									}
+								end,
+							}
+
+							rangedweapons_launch_projectile(
+								fake, 1,
+								{fleshy = 14, knockback = 8},
+								"rangedweapons:shot_bullet",
+								"wielditem",
+								"rangedweapons:shot_bullet_visual",
+								"rangedweapons_deagle",
+								55, 97, 1,
+								function() end,
+								0, 0, 0, 0, 0,
+								"", "", "",
+								0, 0, 0, 0, nil, 0, 0,
+								0.0025, 0, 0, 20
+							)
+						end
+
+						-- éjection du joueur
+						local edir = vector.normalize(vector.subtract(ppos, gpos))
+						edir.y = 0
+						puncher:add_velocity({
+							x = edir.x * 5,
+							y = 3,
+							z = edir.z * 5,
+						})
+					end)
+				end
 			end
 		end
 	end,
@@ -237,7 +299,7 @@ core.register_globalstep(function(dtime)
 						state.taurus_ent = attach_taurus(obj.object)
 					end
 					obj.object:set_bone_override("Arm_Right", {
-						rotation = {vec = {x = 1.5708, y = 0, z = 0}, interpolation = 0.15}
+						rotation = {vec = {x = 1.3, y = 0, z = 0}, interpolation = 0.15}
 					})
 					core.chat_send_all("<" .. (obj.nametag or S("Guard")) .. "> HALTE !! Un terroriste !!!")
 					core.after(5, function()
@@ -319,7 +381,7 @@ core.register_globalstep(function(dtime)
 					state.threatened[pname] = true
 					state.taurus_ent = attach_taurus(obj.object)
 					obj.object:set_bone_override("Arm_Right", {
-						rotation = {vec = {x = 1.5708, y = 0, z = 0}, interpolation = 0.15}
+						rotation = {vec = {x = 1.3, y = 0, z = 0}, interpolation = 0.15}
 					})
 					core.chat_send_player(pname,
 						"<" .. (obj.nametag or S("Guard")) .. "> " ..
