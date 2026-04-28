@@ -138,15 +138,20 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 				self._hit = true
 				-- retire le fly 30s si le joueur vole
 				local pname = obj:get_player_name()
-				local phys = obj:get_physics_override()
-				local was_flying = phys and phys.fly
-				obj:set_physics_override({fly = false})
-				core.after(30, function()
-					local p = core.get_player_by_name(pname)
-					if p then
-						p:set_physics_override({fly = true})
-					end
-				end)
+				local privs = core.get_player_privs(pname)
+				local had_fly = privs.fly
+				if had_fly then
+					privs.fly = nil
+					core.set_player_privs(pname, privs)
+					core.after(30, function()
+						local p = core.get_player_by_name(pname)
+						if p then
+							local p_privs = core.get_player_privs(pname)
+							p_privs.fly = true
+							core.set_player_privs(pname, p_privs)
+						end
+					end)
+				end
 				-- gros dégâts directs
 				local hp = obj:get_hp()
 				obj:set_hp(math.max(0, hp - self._damage))
