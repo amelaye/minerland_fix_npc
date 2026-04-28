@@ -119,34 +119,35 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 	get_staticdata = function(self)
 		return core.serialize({remove = true})
 	end,
-	on_step = function(self, dtime)
+	on_step = function(self, dtime, moveresult)
 		self._timer = (self._timer or 0) + dtime
 		if self._timer > 3 then
 			self.object:remove()
 			return
 		end
-		local pos = self.object:get_pos()
-		if not pos then return end
-		-- détecte collision avec joueur
-		local objs = core.get_objects_inside_radius(pos, 0.8)
-		for _, obj in ipairs(objs) do
-			if obj:is_player() then
-				local hp = obj:get_hp()
-				obj:set_hp(math.max(0, hp - self._damage))
+		if not moveresult or not moveresult.collides then return end
+		if not moveresult.collisions or not moveresult.collisions[1] then return end
+
+		local col = moveresult.collisions[1]
+
+		if col.type == "object" then
+			local victim = col.object
+			if victim and victim:is_player() then
+				-- dégâts directs
+				victim:punch(victim, 1.0, {
+					full_punch_interval = 1.0,
+					damage_groups = {fleshy = self._damage},
+				}, nil)
+				-- éjection
 				local vel = self.object:get_velocity()
-				if vel then
+				if vel and vector.length(vel) > 0 then
 					local dir = vector.normalize(vel)
-					obj:add_velocity({x=dir.x*5, y=3, z=dir.z*5})
+					victim:add_velocity({x=dir.x*5, y=3, z=dir.z*5})
 				end
-				core.sound_play("rangedweapons_deagle", {pos=pos, gain=0.5}, true)
-				self.object:remove()
-				return
+				core.sound_play("rangedweapons_deagle", {pos=self.object:get_pos(), gain=0.5}, true)
 			end
-		end
-		-- détecte collision avec noeud
-		local node = core.get_node(pos)
-		local def = core.registered_nodes[node.name]
-		if def and def.walkable then
+			self.object:remove()
+		elseif col.type == "node" then
 			self.object:remove()
 		end
 	end,
@@ -329,6 +330,9 @@ core.register_globalstep(function(dtime)
 
 			-- détection revolver
 			if dist <= 10 and (wielded == "rangedweapons:taurus" or wielded == "rangedweapons:python") then
+				-- se tourne vers le joueur armé
+				local dir = vector.subtract(ppos, pos)
+				obj.object:set_yaw(math.atan2(-dir.x, dir.z))
 				if not state.gun_warned[pname] then
 					state.gun_warned[pname] = true
 					if not state.taurus_ent then
