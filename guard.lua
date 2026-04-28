@@ -296,6 +296,37 @@ core.register_globalstep(function(dtime)
 			end
 		end
 
+		-- détecte projectile ennemi proche et riposte
+		for _, bullet in pairs(core.luaentities) do
+			if bullet.name == "rangedweapons:shot_bullet" and bullet.object then
+				local bpos = bullet.object:get_pos()
+				if bpos and vector.distance(pos, bpos) <= 2 then
+					-- trouve le joueur qui a tiré
+					local shooter = bullet.owner and core.get_player_by_name(bullet.owner)
+					if shooter and shooter:get_pos() then
+						local state = get_state(obj.object)
+						if not state.taurus_ent then
+							state.taurus_ent = attach_taurus(obj.object)
+						end
+						raise_arm(obj.object)
+						-- tourne vers le tireur
+						local sdir = vector.subtract(shooter:get_pos(), pos)
+						obj.object:set_yaw(math.atan2(-sdir.x, sdir.z))
+						-- rafale de 6 coups
+						local gobj = obj.object
+						for i = 1, 6 do
+							core.after(i * 0.3, function()
+								if not gobj or not gobj:get_pos() then return end
+								if not shooter or not shooter:get_pos() then return end
+								fire_bullet(gobj, shooter)
+							end)
+						end
+					end
+					break
+				end
+			end
+		end
+
 		-- reset si aucun joueur proche
 		local any_threatened = false
 		local any_gun = false
