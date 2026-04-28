@@ -8,8 +8,8 @@ local QUEEN      = core.settings:get("minerland_guard_queen")      or "amelaye"
 local GREET_DIST = tonumber(core.settings:get("minerland_guard_greet_dist")) or 3
 local THREAT_DIST= tonumber(core.settings:get("minerland_guard_threat_dist")) or 3
 
--- état par garde (weak table)
-local guard_states = setmetatable({}, {__mode = "k"})
+-- état par garde (weak table) -- exposé pour init.lua
+guard_states = setmetatable({}, {__mode = "k"})
 
 local function get_state(obj)
 	if not guard_states[obj] then
@@ -82,7 +82,7 @@ core.register_entity("minerland_fix_npc:taurus_visual", {
 	end,
 })
 
-local function attach_taurus(guard_obj)
+function attach_taurus(guard_obj)
 	local ent = core.add_entity(guard_obj:get_pos(), "minerland_fix_npc:taurus_visual")
 	if not ent then return nil end
 	ent:set_attach(guard_obj, "Arm_Right",
@@ -92,7 +92,7 @@ local function attach_taurus(guard_obj)
 	return ent
 end
 
-local function detach_taurus(taurus_ent)
+function detach_taurus(taurus_ent)
 	if taurus_ent and taurus_ent:get_pos() then
 		taurus_ent:remove()
 	end
@@ -175,7 +175,7 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 	end,
 })
 
-local function fire_bullet(guard_obj, target_player)
+function fire_bullet(guard_obj, target_player)
 	local gpos = guard_obj:get_pos()
 	if not gpos then return end
 	local ppos = target_player:get_pos()
@@ -192,13 +192,13 @@ local function fire_bullet(guard_obj, target_player)
 	core.sound_play("rangedweapons_deagle", {pos=gpos, gain=1.0, max_hear_distance=50}, true)
 end
 
-local function raise_arm(obj)
+function raise_arm(obj)
 	obj:set_bone_override("Arm_Right", {
 		rotation = {vec = {x = 1.5708, y = 0, z = 0}, interpolation = 0.15}
 	})
 end
 
-local function lower_arm(obj)
+function lower_arm(obj)
 	obj:set_bone_override("Arm_Right", {})
 end
 
