@@ -19,6 +19,7 @@ local function get_state(obj)
 			bowing     = false,
 			lead_warned= {},
 			gun_warned = {},
+			shooting   = false,
 		}
 	end
 	return guard_states[obj]
@@ -109,45 +110,50 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 		collisionbox = {-0.05, -0.05, -0.05, 0.05, 0.05, 0.05},
 		is_visible = true,
 	},
-	_damage = 14,
+	_damage = 50,
 	_timer = 0,
+	_hit = false,
 	on_activate = function(self, staticdata)
 		local data = core.deserialize(staticdata) or {}
 		if data.remove then self.object:remove() end
 		self._timer = 0
+		self._hit = false
 	end,
 	get_staticdata = function(self)
 		return core.serialize({remove = true})
 	end,
-	on_step = function(self, dtime, moveresult)
+	on_step = function(self, dtime)
 		self._timer = (self._timer or 0) + dtime
-		if self._timer > 3 then
+		if self._timer > 5 then
 			self.object:remove()
 			return
 		end
-		if not moveresult or not moveresult.collides then return end
-		if not moveresult.collisions or not moveresult.collisions[1] then return end
-
-		local col = moveresult.collisions[1]
-
-		if col.type == "object" then
-			local victim = col.object
-			if victim and victim:is_player() then
-				-- dégâts directs
-				victim:punch(victim, 1.0, {
-					full_punch_interval = 1.0,
-					damage_groups = {fleshy = self._damage},
-				}, nil)
-				-- éjection
+		if self._hit then return end
+		local pos = self.object:get_pos()
+		if not pos then return end
+		-- scan joueurs proches
+		local objs = core.get_objects_inside_radius(pos, 1.5)
+		for _, obj in ipairs(objs) do
+			if obj:is_player() then
+				self._hit = true
+				-- gros dégâts directs
+				local hp = obj:get_hp()
+				obj:set_hp(math.max(0, hp - self._damage))
+				-- envol de plusieurs blocs
 				local vel = self.object:get_velocity()
 				if vel and vector.length(vel) > 0 then
 					local dir = vector.normalize(vel)
-					victim:add_velocity({x=dir.x*5, y=3, z=dir.z*5})
+					obj:add_velocity({x=dir.x*20, y=15, z=dir.z*20})
 				end
-				core.sound_play("rangedweapons_deagle", {pos=self.object:get_pos(), gain=0.5}, true)
+				core.sound_play("rangedweapons_deagle", {pos=pos, gain=1.0, max_hear_distance=50}, true)
+				self.object:remove()
+				return
 			end
-			self.object:remove()
-		elseif col.type == "node" then
+		end
+		-- supprime si touche un noeud solide
+		local node = core.get_node(pos)
+		local def = core.registered_nodes[node.name]
+		if def and def.walkable then
 			self.object:remove()
 		end
 	end,
@@ -164,7 +170,7 @@ local function fire_bullet(guard_obj, target_player)
 
 	local bullet = core.add_entity(gpos, "minerland_fix_npc:guard_bullet")
 	if bullet then
-		bullet:set_velocity(vector.multiply(dir, 50))
+		bullet:set_velocity(vector.multiply(dir, 60))
 		bullet:set_acceleration({x=0, y=-2, z=0})
 	end
 	core.sound_play("rangedweapons_deagle", {pos=gpos, gain=1.0, max_hear_distance=50}, true)
@@ -232,7 +238,6 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	end,
 
 	on_step = function(self, dtime)
-		-- annule knockback en permanence sauf en follow
 		if self.order ~= "follow" then
 			self.object:set_velocity({x = 0, y = 0, z = 0})
 		end
@@ -240,23 +245,6 @@ mobs:register_mob("minerland_fix_npc:guard", {
 
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
 		self.object:set_velocity({x = 0, y = 0, z = 0})
-		if puncher and puncher:is_player() then
-			local state = get_state(self.object)
-			if not state.taurus_ent then
-				state.taurus_ent = attach_taurus(self.object)
-			end
-			raise_arm(self.object)
-
-			-- rafale de 6 coups
-			local gobj = self.object
-			for i = 1, 6 do
-				core.after(i * 0.3, function()
-					if not gobj or not gobj:get_pos() then return end
-					if not puncher or not puncher:get_pos() then return end
-					fire_bullet(gobj, puncher)
-				end)
-			end
-		end
 	end,
 
 	on_rightclick = function(self, clicker)
@@ -275,7 +263,7 @@ mobs:register_mob("minerland_fix_npc:guard", {
 local timer = 0
 core.register_globalstep(function(dtime)
 	timer = timer + dtime
-	if timer < 0.1 then return end
+	if timer < 0.05 then return end
 	timer = 0
 
 	local players = core.get_connected_players()
@@ -296,39 +284,34 @@ core.register_globalstep(function(dtime)
 			end
 		end
 
-		-- détecte projectile ennemi proche et riposte
-		for _, bullet in pairs(core.luaentities) do
-			if bullet.name == "rangedweapons:shot_bullet" and bullet.object then
-				local bpos = bullet.object:get_pos()
-				if bpos and vector.distance(pos, bpos) <= 2 then
-					-- trouve le joueur qui a tiré
-					local shooter = bullet.owner and core.get_player_by_name(bullet.owner)
-					if shooter and shooter:get_pos() then
-						local state = get_state(obj.object)
-						if not state.shooting then
+		-- détecte projectile ennemi proche et riposte UNE FOIS
+		if not state.shooting then
+			for _, bullet in pairs(core.luaentities) do
+				if bullet.name == "rangedweapons:shot_bullet" and bullet.object then
+					local bpos = bullet.object:get_pos()
+					if bpos and vector.distance(pos, bpos) <= 5 then
+						local shooter = bullet.owner and core.get_player_by_name(bullet.owner)
+						if shooter and shooter:get_pos() then
 							state.shooting = true
 							if not state.taurus_ent then
 								state.taurus_ent = attach_taurus(obj.object)
 							end
 							raise_arm(obj.object)
-							-- tourne vers le tireur
 							local sdir = vector.subtract(shooter:get_pos(), pos)
 							obj.object:set_yaw(math.atan2(-sdir.x, sdir.z))
-							-- rafale de 6 coups
 							local gobj = obj.object
-							for i = 1, 6 do
-								core.after(i * 0.3, function()
-									if not gobj or not gobj:get_pos() then return end
-									if not shooter or not shooter:get_pos() then return end
-									fire_bullet(gobj, shooter)
-								end)
-							end
-							core.after(2, function()
+							-- UN SEUL coup
+							core.after(0.1, function()
+								if not gobj or not gobj:get_pos() then return end
+								if not shooter or not shooter:get_pos() then return end
+								fire_bullet(gobj, shooter)
+							end)
+							core.after(3, function()
 								state.shooting = false
 							end)
 						end
+						break
 					end
-					break
 				end
 			end
 		end
@@ -367,7 +350,6 @@ core.register_globalstep(function(dtime)
 
 			-- détection revolver
 			if dist <= 10 and (wielded == "rangedweapons:taurus" or wielded == "rangedweapons:python") then
-				-- se tourne vers le joueur armé
 				local dir = vector.subtract(ppos, pos)
 				obj.object:set_yaw(math.atan2(-dir.x, dir.z))
 				if not state.gun_warned[pname] then
