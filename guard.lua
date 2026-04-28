@@ -136,6 +136,21 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 		for _, obj in ipairs(objs) do
 			if obj:is_player() then
 				self._hit = true
+				-- retire le fly 30s si le joueur vole
+				local pname = obj:get_player_name()
+				local privs = core.get_player_privs(pname)
+				local had_fly = privs.fly
+				if had_fly then
+					privs.fly = false
+					core.set_player_privs(pname, privs)
+					core.after(30, function()
+						local p = core.get_player_by_name(pname)
+						if p then
+							privs.fly = true
+							core.set_player_privs(pname, privs)
+						end
+					end)
+				end
 				-- gros dégâts directs
 				local hp = obj:get_hp()
 				obj:set_hp(math.max(0, hp - self._damage))
@@ -379,7 +394,7 @@ core.register_globalstep(function(dtime)
 						state.taurus_ent = attach_taurus(obj.object)
 					end
 					raise_arm(obj.object)
-					core.chat_send_all("<" .. (obj.nametag or S("Guard")) .. "> HALTE !! Un terroriste !!!")
+					core.chat_send_all("<" .. (obj.nametag or S("Guard")) .. "> BAISSEZ VOTRE ARME !! TOUT DE SUITE !!!")
 					core.after(5, function()
 						if state.gun_warned then
 							state.gun_warned[pname] = nil
