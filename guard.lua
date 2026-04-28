@@ -132,7 +132,7 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 		local pos = self.object:get_pos()
 		if not pos then return end
 		-- scan joueurs proches
-		local objs = core.get_objects_inside_radius(pos, 1.5)
+		local objs = core.get_objects_inside_radius(pos, 2.5)
 		for _, obj in ipairs(objs) do
 			if obj:is_player() then
 				self._hit = true
@@ -245,6 +245,27 @@ mobs:register_mob("minerland_fix_npc:guard", {
 
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
 		self.object:set_velocity({x = 0, y = 0, z = 0})
+		if puncher and puncher:is_player() then
+			local state = get_state(self.object)
+			if not state.shooting then
+				state.shooting = true
+				if not state.taurus_ent then
+					state.taurus_ent = attach_taurus(self.object)
+				end
+				raise_arm(self.object)
+				local sdir = vector.subtract(puncher:get_pos(), self.object:get_pos())
+				self.object:set_yaw(math.atan2(-sdir.x, sdir.z))
+				local gobj = self.object
+				core.after(0.1, function()
+					if not gobj or not gobj:get_pos() then return end
+					if not puncher or not puncher:get_pos() then return end
+					fire_bullet(gobj, puncher)
+				end)
+				core.after(3, function()
+					state.shooting = false
+				end)
+			end
+		end
 	end,
 
 	on_rightclick = function(self, clicker)
