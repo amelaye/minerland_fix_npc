@@ -69,7 +69,7 @@ core.register_entity("minerland_fix_npc:taurus_visual", {
 		pointable = false,
 		visual = "wielditem",
 		textures = {"rangedweapons:taurus"},
-		visual_size = {x = 0.20, y = 0.20},
+		visual_size = {x = 0.13, y = 0.13},
 		is_visible = true,
 	},
 	on_activate = function(self, staticdata)
@@ -187,7 +187,7 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	pathfinding = true,
 	hp_min = 99999,
 	hp_max = 99999,
-	armor = {immortal = 1, fleshy = 0},
+	armor = {immortal = 1, fleshy = 100},
 	collisionbox = {-0.35,-1.0,-0.35, 0.35,0.8,0.35},
 	visual = "mesh",
 	mesh = "mobs_character.b3d",
