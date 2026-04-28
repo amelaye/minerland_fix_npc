@@ -230,27 +230,26 @@ mobs:register_mob("minerland_fix_npc:guard", {
 		self.object:set_velocity({x = 0, y = 0, z = 0})
 		if puncher and puncher:is_player() then
 			local pname = puncher:get_player_name()
-			if pname ~= QUEEN then
-				self.attack_players = true
-				self.state = "attack"
-				self.attack = puncher
 
-				-- attache le taurus et lève le bras
-				local state = get_state(self.object)
-				if not state.taurus_ent then
-					state.taurus_ent = attach_taurus(self.object)
-				end
-				raise_arm(self.object)
+			self.attack_players = true
+			self.state = "attack"
+			self.attack = puncher
 
-				-- rafale de 6 coups
-				local gobj = self.object
-				for i = 1, 6 do
-					core.after(i * 0.3, function()
-						if not gobj or not gobj:get_pos() then return end
-						if not puncher or not puncher:get_pos() then return end
-						fire_bullet(gobj, puncher)
-					end)
-				end
+			-- attache le taurus et lève le bras
+			local state = get_state(self.object)
+			if not state.taurus_ent then
+				state.taurus_ent = attach_taurus(self.object)
+			end
+			raise_arm(self.object)
+
+			-- rafale de 6 coups
+			local gobj = self.object
+			for i = 1, 6 do
+				core.after(i * 0.3, function()
+					if not gobj or not gobj:get_pos() then return end
+					if not puncher or not puncher:get_pos() then return end
+					fire_bullet(gobj, puncher)
+				end)
 			end
 		end
 	end,
