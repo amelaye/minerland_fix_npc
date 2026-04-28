@@ -303,24 +303,30 @@ core.register_on_mods_loaded(function()
 		self.object:set_velocity({x = 0, y = 0, z = 0})
 		-- riposte si joueur
 		if puncher and puncher:is_player() then
-			local state = guard_states and guard_states[self.object]
-			if state and not state.shooting then
-				state.shooting = true
-				if not state.taurus_ent then
-					state.taurus_ent = attach_taurus and attach_taurus(self.object)
+			local pname = puncher:get_player_name()
+			local QUEEN_NAME = core.settings:get("minerland_guard_queen") or "amelaye"
+			if pname ~= QUEEN_NAME then
+				local state = guard_states and guard_states[self.object]
+				if state and not state.shooting then
+					state.shooting = true
+					core.chat_send_player(pname,
+						"<" .. (self.nametag or "Garde") .. "> Interdit de frapper la Garde Royale !")
+					if not state.taurus_ent then
+						state.taurus_ent = attach_taurus and attach_taurus(self.object)
+					end
+					if raise_arm then raise_arm(self.object) end
+					local sdir = vector.subtract(puncher:get_pos(), self.object:get_pos())
+					self.object:set_yaw(math.atan2(-sdir.x, sdir.z))
+					local gobj = self.object
+					core.after(0.1, function()
+						if not gobj or not gobj:get_pos() then return end
+						if not puncher or not puncher:get_pos() then return end
+						if fire_bullet then fire_bullet(gobj, puncher) end
+					end)
+					core.after(3, function()
+						state.shooting = false
+					end)
 				end
-				if raise_arm then raise_arm(self.object) end
-				local sdir = vector.subtract(puncher:get_pos(), self.object:get_pos())
-				self.object:set_yaw(math.atan2(-sdir.x, sdir.z))
-				local gobj = self.object
-				core.after(0.1, function()
-					if not gobj or not gobj:get_pos() then return end
-					if not puncher or not puncher:get_pos() then return end
-					if fire_bullet then fire_bullet(gobj, puncher) end
-				end)
-				core.after(3, function()
-					state.shooting = false
-				end)
 			end
 		end
 		if original_punch then return original_punch(self, puncher, time_from_last_punch, tool_capabilities, dir) end
