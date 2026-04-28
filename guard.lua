@@ -289,11 +289,9 @@ core.register_globalstep(function(dtime)
 			end
 		end
 
-		-- force HP max (immortalité malgré fleshy=100)
-		if obj.health and obj.max_hp and obj.health < obj.max_hp then
-			obj.health = obj.max_hp
-			obj.object:set_hp(obj.max_hp)
-		end
+		-- force HP max en permanence
+		obj.object:set_hp(65535)
+		if obj.health then obj.health = obj.hp_max or 99999 end
 
 		-- détecte projectile ennemi proche et riposte UNE FOIS
 		if not state.shooting then
