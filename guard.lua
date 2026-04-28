@@ -101,7 +101,7 @@ end
 core.register_entity("minerland_fix_npc:guard_bullet", {
 	initial_properties = {
 		physical = true,
-		collide_with_objects = true,
+		collide_with_objects = false,
 		pointable = false,
 		visual = "wielditem",
 		textures = {"rangedweapons:shot_bullet_visual"},
@@ -114,6 +114,7 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 	on_activate = function(self, staticdata)
 		local data = core.deserialize(staticdata) or {}
 		if data.remove then self.object:remove() end
+		self._timer = 0
 	end,
 	get_staticdata = function(self)
 		return core.serialize({remove = true})
@@ -124,16 +125,14 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 			self.object:remove()
 			return
 		end
-		-- détecte collision avec joueur
 		local pos = self.object:get_pos()
 		if not pos then return end
-		local objs = core.get_objects_inside_radius(pos, 0.5)
+		-- détecte collision avec joueur
+		local objs = core.get_objects_inside_radius(pos, 0.8)
 		for _, obj in ipairs(objs) do
 			if obj:is_player() then
-				local pname = obj:get_player_name()
-				-- dégâts directs
-				obj:set_hp(math.max(0, obj:get_hp() - self._damage))
-				-- éjection
+				local hp = obj:get_hp()
+				obj:set_hp(math.max(0, hp - self._damage))
 				local vel = self.object:get_velocity()
 				if vel then
 					local dir = vector.normalize(vel)
@@ -143,6 +142,12 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 				self.object:remove()
 				return
 			end
+		end
+		-- détecte collision avec noeud
+		local node = core.get_node(pos)
+		local def = core.registered_nodes[node.name]
+		if def and def.walkable then
+			self.object:remove()
 		end
 	end,
 })
@@ -159,7 +164,7 @@ local function fire_bullet(guard_obj, target_player)
 	local bullet = core.add_entity(gpos, "minerland_fix_npc:guard_bullet")
 	if bullet then
 		bullet:set_velocity(vector.multiply(dir, 50))
-		bullet:set_acceleration({x=0, y=-1, z=0})
+		bullet:set_acceleration({x=0, y=-2, z=0})
 	end
 	core.sound_play("rangedweapons_deagle", {pos=gpos, gain=1.0, max_hear_distance=50}, true)
 end
@@ -225,17 +230,16 @@ mobs:register_mob("minerland_fix_npc:guard", {
 		return true, nil
 	end,
 
+	on_step = function(self, dtime)
+		-- annule knockback en permanence sauf en follow
+		if self.order ~= "follow" then
+			self.object:set_velocity({x = 0, y = 0, z = 0})
+		end
+	end,
+
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
-		-- annule toute projection
 		self.object:set_velocity({x = 0, y = 0, z = 0})
 		if puncher and puncher:is_player() then
-			local pname = puncher:get_player_name()
-
-			self.attack_players = true
-			self.state = "attack"
-			self.attack = puncher
-
-			-- attache le taurus et lève le bras
 			local state = get_state(self.object)
 			if not state.taurus_ent then
 				state.taurus_ent = attach_taurus(self.object)
@@ -284,9 +288,11 @@ core.register_globalstep(function(dtime)
 		local state = get_state(obj.object)
 
 		-- force immobilité + annule knockback
-		obj.object:set_velocity({x = 0, y = 0, z = 0})
-		if obj.order == "stand" then
-			obj:set_animation("stand")
+		if obj.order ~= "follow" then
+			obj.object:set_velocity({x = 0, y = 0, z = 0})
+			if obj.order == "stand" then
+				obj:set_animation("stand")
+			end
 		end
 
 		-- reset si aucun joueur proche
