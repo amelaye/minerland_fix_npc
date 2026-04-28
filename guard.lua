@@ -8,6 +8,18 @@ local QUEEN      = core.settings:get("minerland_guard_queen")      or "amelaye"
 local GREET_DIST = tonumber(core.settings:get("minerland_guard_greet_dist")) or 3
 local THREAT_DIST= tonumber(core.settings:get("minerland_guard_threat_dist")) or 3
 
+-- détecte toute arme rangedweapons
+local function is_ranged_weapon(item_name)
+	local def = core.registered_items[item_name]
+	return def and def.RW_gun_capabilities ~= nil
+end
+
+-- détecte toute arme rangedweapons
+local function is_ranged_weapon(item_name)
+	local def = core.registered_items[item_name]
+	return def and def.RW_gun_capabilities ~= nil
+end
+
 -- état par garde (weak table) -- exposé pour init.lua
 guard_states = setmetatable({}, {__mode = "k"})
 
@@ -321,6 +333,12 @@ core.register_globalstep(function(dtime)
 			end
 		end
 
+		-- force HP max (immortalité malgré fleshy=100)
+		if obj.health and obj.max_hp and obj.health < obj.max_hp then
+			obj.health = obj.max_hp
+			obj.object:set_hp(obj.max_hp)
+		end
+
 		-- détecte projectile ennemi proche et riposte UNE FOIS
 		if not state.shooting then
 			for _, bullet in pairs(core.luaentities) do
@@ -362,7 +380,7 @@ core.register_globalstep(function(dtime)
 				local dist = vector.distance(pos, ppos)
 				local wielded = player:get_wielded_item():get_name()
 				if dist <= THREAT_DIST then any_threatened = true end
-				if dist <= 10 and (wielded == "rangedweapons:taurus" or wielded == "rangedweapons:python") then
+				if dist <= 10 and (is_ranged_weapon(wielded)) then
 					any_gun = true
 				end
 			end
@@ -386,7 +404,7 @@ core.register_globalstep(function(dtime)
 			local wielded = player:get_wielded_item():get_name()
 
 			-- détection revolver
-			if dist <= 10 and (wielded == "rangedweapons:taurus" or wielded == "rangedweapons:python") then
+			if dist <= 10 and (is_ranged_weapon(wielded)) then
 				local dir = vector.subtract(ppos, pos)
 				obj.object:set_yaw(math.atan2(-dir.x, dir.z))
 				if not state.gun_warned[pname] then
