@@ -305,20 +305,26 @@ core.register_globalstep(function(dtime)
 					local shooter = bullet.owner and core.get_player_by_name(bullet.owner)
 					if shooter and shooter:get_pos() then
 						local state = get_state(obj.object)
-						if not state.taurus_ent then
-							state.taurus_ent = attach_taurus(obj.object)
-						end
-						raise_arm(obj.object)
-						-- tourne vers le tireur
-						local sdir = vector.subtract(shooter:get_pos(), pos)
-						obj.object:set_yaw(math.atan2(-sdir.x, sdir.z))
-						-- rafale de 6 coups
-						local gobj = obj.object
-						for i = 1, 6 do
-							core.after(i * 0.3, function()
-								if not gobj or not gobj:get_pos() then return end
-								if not shooter or not shooter:get_pos() then return end
-								fire_bullet(gobj, shooter)
+						if not state.shooting then
+							state.shooting = true
+							if not state.taurus_ent then
+								state.taurus_ent = attach_taurus(obj.object)
+							end
+							raise_arm(obj.object)
+							-- tourne vers le tireur
+							local sdir = vector.subtract(shooter:get_pos(), pos)
+							obj.object:set_yaw(math.atan2(-sdir.x, sdir.z))
+							-- rafale de 6 coups
+							local gobj = obj.object
+							for i = 1, 6 do
+								core.after(i * 0.3, function()
+									if not gobj or not gobj:get_pos() then return end
+									if not shooter or not shooter:get_pos() then return end
+									fire_bullet(gobj, shooter)
+								end)
+							end
+							core.after(2, function()
+								state.shooting = false
 							end)
 						end
 					end
