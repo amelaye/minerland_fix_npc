@@ -14,12 +14,6 @@ local function is_ranged_weapon(item_name)
 	return def and def.RW_gun_capabilities ~= nil
 end
 
--- détecte toute arme rangedweapons
-local function is_ranged_weapon(item_name)
-	local def = core.registered_items[item_name]
-	return def and def.RW_gun_capabilities ~= nil
-end
-
 -- état par garde (weak table) -- exposé pour init.lua
 guard_states = setmetatable({}, {__mode = "k"})
 
@@ -37,7 +31,6 @@ local function get_state(obj)
 	return guard_states[obj]
 end
 
--- lève les deux bras
 local function bow(obj)
 	obj:set_bone_override("Arm_Right", {
 		rotation = {vec = vector.new(math.pi * 0.8, 0, 0), absolute = true}
@@ -47,13 +40,11 @@ local function bow(obj)
 	})
 end
 
--- remet les bras en place
 local function unbow(obj)
 	obj:set_bone_override("Arm_Right", {})
 	obj:set_bone_override("Arm_Left",  {})
 end
 
--- éjecte un joueur depuis la position du garde
 local function eject(player, pname, gpos)
 	local privs = core.get_player_privs(pname)
 	local had_fly = privs.fly
@@ -74,7 +65,6 @@ local function eject(player, pname, gpos)
 	end)
 end
 
--- entité visuelle du taurus attachée au bras
 core.register_entity("minerland_fix_npc:taurus_visual", {
 	initial_properties = {
 		physical = false,
@@ -110,7 +100,6 @@ function detach_taurus(taurus_ent)
 	end
 end
 
--- projectile maison tiré par le garde
 core.register_entity("minerland_fix_npc:guard_bullet", {
 	initial_properties = {
 		physical = true,
@@ -136,19 +125,14 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 	end,
 	on_step = function(self, dtime)
 		self._timer = (self._timer or 0) + dtime
-		if self._timer > 5 then
-			self.object:remove()
-			return
-		end
+		if self._timer > 5 then self.object:remove() return end
 		if self._hit then return end
 		local pos = self.object:get_pos()
 		if not pos then return end
-		-- scan joueurs proches
 		local objs = core.get_objects_inside_radius(pos, 2.5)
 		for _, obj in ipairs(objs) do
 			if obj:is_player() then
 				self._hit = true
-				-- retire le fly 30s si le joueur vole
 				local pname = obj:get_player_name()
 				local privs = core.get_player_privs(pname)
 				local had_fly = privs.fly
@@ -164,10 +148,8 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 						end
 					end)
 				end
-				-- gros dégâts directs
 				local hp = obj:get_hp()
 				obj:set_hp(math.max(0, hp - self._damage))
-				-- envol de plusieurs blocs
 				local vel = self.object:get_velocity()
 				if vel and vector.length(vel) > 0 then
 					local dir = vector.normalize(vel)
@@ -178,12 +160,9 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 				return
 			end
 		end
-		-- supprime si touche un noeud solide
 		local node = core.get_node(pos)
 		local def = core.registered_nodes[node.name]
-		if def and def.walkable then
-			self.object:remove()
-		end
+		if def and def.walkable then self.object:remove() end
 	end,
 })
 
@@ -192,10 +171,8 @@ function fire_bullet(guard_obj, target_player)
 	if not gpos then return end
 	local ppos = target_player:get_pos()
 	if not ppos then return end
-
 	gpos.y = gpos.y + 0.8
 	local dir = vector.normalize(vector.subtract(ppos, gpos))
-
 	local bullet = core.add_entity(gpos, "minerland_fix_npc:guard_bullet")
 	if bullet then
 		bullet:set_velocity(vector.multiply(dir, 60))
@@ -273,27 +250,6 @@ mobs:register_mob("minerland_fix_npc:guard", {
 
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
 		self.object:set_velocity({x = 0, y = 0, z = 0})
-		if puncher and puncher:is_player() then
-			local state = get_state(self.object)
-			if not state.shooting then
-				state.shooting = true
-				if not state.taurus_ent then
-					state.taurus_ent = attach_taurus(self.object)
-				end
-				raise_arm(self.object)
-				local sdir = vector.subtract(puncher:get_pos(), self.object:get_pos())
-				self.object:set_yaw(math.atan2(-sdir.x, sdir.z))
-				local gobj = self.object
-				core.after(0.1, function()
-					if not gobj or not gobj:get_pos() then return end
-					if not puncher or not puncher:get_pos() then return end
-					fire_bullet(gobj, puncher)
-				end)
-				core.after(3, function()
-					state.shooting = false
-				end)
-			end
-		end
 	end,
 
 	on_rightclick = function(self, clicker)
@@ -355,7 +311,6 @@ core.register_globalstep(function(dtime)
 							local sdir = vector.subtract(shooter:get_pos(), pos)
 							obj.object:set_yaw(math.atan2(-sdir.x, sdir.z))
 							local gobj = obj.object
-							-- UN SEUL coup
 							core.after(0.1, function()
 								if not gobj or not gobj:get_pos() then return end
 								if not shooter or not shooter:get_pos() then return end
@@ -380,9 +335,7 @@ core.register_globalstep(function(dtime)
 				local dist = vector.distance(pos, ppos)
 				local wielded = player:get_wielded_item():get_name()
 				if dist <= THREAT_DIST then any_threatened = true end
-				if dist <= 10 and (is_ranged_weapon(wielded)) then
-					any_gun = true
-				end
+				if dist <= 10 and is_ranged_weapon(wielded) then any_gun = true end
 			end
 		end
 		if not any_threatened and not any_gun then
@@ -403,8 +356,8 @@ core.register_globalstep(function(dtime)
 			local dist    = vector.distance(pos, ppos)
 			local wielded = player:get_wielded_item():get_name()
 
-			-- détection revolver
-			if dist <= 10 and (is_ranged_weapon(wielded)) then
+			-- détection arme
+			if dist <= 10 and is_ranged_weapon(wielded) then
 				local dir = vector.subtract(ppos, pos)
 				obj.object:set_yaw(math.atan2(-dir.x, dir.z))
 				if not state.gun_warned[pname] then
@@ -415,15 +368,11 @@ core.register_globalstep(function(dtime)
 					raise_arm(obj.object)
 					core.chat_send_all("<" .. (obj.nametag or S("Guard")) .. "> BAISSEZ VOTRE ARME !! TOUT DE SUITE !!!")
 					core.after(5, function()
-						if state.gun_warned then
-							state.gun_warned[pname] = nil
-						end
+						if state.gun_warned then state.gun_warned[pname] = nil end
 					end)
 				end
 			else
-				if state.gun_warned[pname] then
-					state.gun_warned[pname] = nil
-				end
+				if state.gun_warned[pname] then state.gun_warned[pname] = nil end
 			end
 
 			-- éjection laisse
@@ -460,7 +409,6 @@ core.register_globalstep(function(dtime)
 			end
 
 			if pname == QUEEN then
-				-- salutation
 				if dist <= GREET_DIST and not state.greeted[pname] and not state.bowing then
 					state.greeted[pname] = true
 					state.bowing = true
@@ -478,7 +426,6 @@ core.register_globalstep(function(dtime)
 					state.greeted[pname] = nil
 				end
 			else
-				-- menace
 				if dist <= THREAT_DIST and not state.threatened[pname] then
 					state.threatened[pname] = true
 					if not state.taurus_ent then
@@ -553,7 +500,6 @@ core.register_on_mods_loaded(function()
 		end
 	})
 
-	-- bloque leads
 	if leads and leads.custom_leashable_entities then
 		leads.custom_leashable_entities["minerland_fix_npc:guard"] = false
 	end
