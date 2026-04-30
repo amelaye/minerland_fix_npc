@@ -335,7 +335,7 @@ core.register_globalstep(function(dtime)
 								if not shooter or not shooter:get_pos() then return end
 								fire_bullet(gobj, shooter)
 							end)
-							core.after(8, function()
+							core.after(3, function()
 								state.shooting = false
 							end)
 						end
