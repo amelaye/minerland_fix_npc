@@ -70,7 +70,7 @@ local function eject(player, pname, gpos)
 	local privs = core.get_player_privs(pname)
 	local had_fly = privs.fly
 	if had_fly then
-		privs.fly = false
+		privs.fly = nil
 		core.set_player_privs(pname, privs)
 	end
 	local ppos = player:get_pos()
