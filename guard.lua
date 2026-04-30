@@ -4,25 +4,25 @@
 local S = core.get_translator("minerland_fix_npc")
 local mcl = core.get_modpath("mcl_core") ~= nil
 
-local QUEEN = core.settings:get("minerland_guard_queen")
+QUEEN = core.settings:get("minerland_guard_queen")
 if not QUEEN then QUEEN = "amelaye" end
 
-local GREET_DIST = tonumber(core.settings:get("minerland_guard_greet_dist"))
+GREET_DIST = tonumber(core.settings:get("minerland_guard_greet_dist"))
 if not GREET_DIST then GREET_DIST = 3 end
 
-local THREAT_DIST = tonumber(core.settings:get("minerland_guard_threat_dist"))
+THREAT_DIST = tonumber(core.settings:get("minerland_guard_threat_dist"))
 if not THREAT_DIST then THREAT_DIST = 3 end
 
-local SUSPECT = core.settings:get("minerland_guard_suspect")
+SUSPECT = core.settings:get("minerland_guard_suspect")
 if not SUSPECT then SUSPECT = "Luffy0805" end
 
-local SUSPECT_DIST = tonumber(core.settings:get("minerland_guard_suspect_dist"))
+SUSPECT_DIST = tonumber(core.settings:get("minerland_guard_suspect_dist"))
 if not SUSPECT_DIST then SUSPECT_DIST = 10 end
 
-local RESCUE_DIST = tonumber(core.settings:get("minerland_guard_rescue_dist"))
+RESCUE_DIST = tonumber(core.settings:get("minerland_guard_rescue_dist"))
 if not RESCUE_DIST then RESCUE_DIST = 20 end
 
-local GUARD_COLOR = core.settings:get("minerland_guard_color")
+GUARD_COLOR = core.settings:get("minerland_guard_color")
 if not GUARD_COLOR then GUARD_COLOR = "#FF0000" end
 
 -- garde d'urgence actif (un seul à la fois)
@@ -158,6 +158,9 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 				local privs = core.get_player_privs(pname)
 				local had_fly = privs.fly
 				if had_fly then
+					core.chat_send_player(pname,
+    					core.colorize(GUARD_COLOR, "<Garde Royale>") ..
+    					" Vous avez le fly désactivé trente secondes.")
 					privs.fly = nil
 					core.set_player_privs(pname, privs)
 					core.after(30, function()
