@@ -70,7 +70,7 @@ local function eject(player, pname, gpos)
 	local privs = core.get_player_privs(pname)
 	local had_fly = privs.fly
 	if had_fly then
-		privs.fly = false
+		privs.fly = nil
 		core.set_player_privs(pname, privs)
 	end
 	local ppos = player:get_pos()
@@ -160,11 +160,11 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 				if had_fly then
 					core.chat_send_player(pname,
 						core.colorize(GUARD_COLOR, "<Garde Royale>") ..
-						" Vous avez le fly désactivé trente secondes.")
+						" Vous avez le fly désactivé 5 secondes.")
 					privs.fly = nil
 					core.set_player_privs(pname, privs)
 					local t1 = core.get_us_time()
-					core.after(30, function()
+					core.after(5, function()
 						local p = core.get_player_by_name(pname)
 						if not p then return end
 						if core.get_us_time() - t1 < 31000000 then
@@ -220,8 +220,6 @@ end
 mobs:register_mob("minerland_fix_npc:guard", {
 	description = "Garde Royale",
 	type = "npc",
-	nametag = core.colorize(GUARD_COLOR, "Garde Royale"),
-	nametag_color = GUARD_COLOR,
 	passive = true,
 	damage = 8,
 	attack_type = "dogfight",
@@ -568,8 +566,8 @@ core.register_chatcommand("osecour", {
 
 		-- détection prison et tp home si nécessaire
 		local caller_pos = caller:get_pos()
-		local PRISON_MIN = {x = -1806, y = -1144,   z = -2120}
-		local PRISON_MAX = {x = -1781, y = -1121.9, z = -2064}
+		local PRISON_MIN = {x = -1820, y = -1144, z = -2129}
+		local PRISON_MAX = {x = -1763, y = -1139, z = -2072}
 		local in_prison = (
 			caller_pos.x >= PRISON_MIN.x and caller_pos.x <= PRISON_MAX.x and
 			caller_pos.y >= PRISON_MIN.y and caller_pos.y <= PRISON_MAX.y and
@@ -667,7 +665,7 @@ core.register_chatcommand("osecour", {
 						if had_fly then
 							core.chat_send_player(SUSPECT,
 								core.colorize(GUARD_COLOR, "<Garde Royale>") ..
-								" Vous avez le fly désactivé trente secondes.")
+								" Vous avez le fly désactivé 30 secondes.")
 							privs.fly = nil
 							core.set_player_privs(SUSPECT, privs)
 							local t2 = core.get_us_time()
