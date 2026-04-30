@@ -6,25 +6,24 @@ local mcl = core.get_modpath("mcl_core") ~= nil
 
 local QUEEN = core.settings:get("minerland_guard_queen")
 if not QUEEN then QUEEN = "amelaye" end
- 
+
 local GREET_DIST = tonumber(core.settings:get("minerland_guard_greet_dist"))
 if not GREET_DIST then GREET_DIST = 3 end
- 
+
 local THREAT_DIST = tonumber(core.settings:get("minerland_guard_threat_dist"))
 if not THREAT_DIST then THREAT_DIST = 3 end
- 
+
 local SUSPECT = core.settings:get("minerland_guard_suspect")
 if not SUSPECT then SUSPECT = "Luffy0805" end
- 
+
 local SUSPECT_DIST = tonumber(core.settings:get("minerland_guard_suspect_dist"))
 if not SUSPECT_DIST then SUSPECT_DIST = 10 end
- 
+
 local RESCUE_DIST = tonumber(core.settings:get("minerland_guard_rescue_dist"))
 if not RESCUE_DIST then RESCUE_DIST = 20 end
- 
-local GUARD_COLOR = core.settings:get("minerland_guard_color")
-if not GUARD_COLOR then GUARD_COLOR = "#ff4500" end
 
+local GUARD_COLOR = core.settings:get("minerland_guard_color")
+if not GUARD_COLOR then GUARD_COLOR = "#FF0000" end
 
 -- garde d'urgence actif (un seul à la fois)
 local rescue_guard_obj = nil
@@ -422,6 +421,9 @@ core.register_globalstep(function(dtime)
 			if wielded == "leads:lead" and dist <= 3 then
 				if not state.lead_warned[pname] then
 					state.lead_warned[pname] = true
+					-- se tourne vers le joueur avant d'agir
+					local ldir = vector.subtract(ppos, pos)
+					obj.object:set_yaw(math.atan2(-ldir.x, ldir.z))
 					eject(player, pname, pos)
 					obj.object:set_bone_override("Leg_Right", {
 						rotation = {vec = {x = 1.0, y = 0, z = 0}, interpolation = 0.1}
