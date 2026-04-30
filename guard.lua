@@ -383,20 +383,18 @@ core.register_globalstep(function(dtime)
 			-- surveillance du suspect
 			if pname == SUSPECT then
 				if dist <= SUSPECT_DIST then
-					-- 1) rotation vers Luffy à chaque tick
+					-- 1) rotation à chaque tick
 					local dir = vector.subtract(ppos, pos)
 					obj.object:set_yaw(math.atan2(-dir.x, dir.z))
-					-- 2) message une seule fois
+					-- 2) arme brandie à chaque tick
+					if not state.taurus_ent then
+						state.taurus_ent = attach_taurus(obj.object)
+					end
+					raise_arm(obj.object)
+					-- 3) message une seule fois
 					if not state.suspect_warned[pname] then
 						state.suspect_warned[pname] = true
-						core.chat_send_player(pname,
-							core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
-							"Toi je te surveille, sale mécréant, délinquant, traitre de la Royauté !")
-						-- 3) brandir l'arme
-						if not state.taurus_ent then
-							state.taurus_ent = attach_taurus(obj.object)
-						end
-						raise_arm(obj.object)
+						core.chat_send_player(pname, ...)
 					end
 				elseif dist > SUSPECT_DIST and state.suspect_warned[pname] then
 					state.suspect_warned[pname] = nil
