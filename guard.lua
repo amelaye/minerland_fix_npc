@@ -160,7 +160,7 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 				if had_fly then
 					core.chat_send_player(pname,
     					core.colorize(GUARD_COLOR, "<Garde Royale>") ..
-    					" Vous avez le fly désactivé trente secondes.")
+    					" Vous avez le fly désactivé 30 secondes.")
 					privs.fly = nil
 					core.set_player_privs(pname, privs)
 					core.after(30, function()
