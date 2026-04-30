@@ -357,7 +357,7 @@ core.register_globalstep(function(dtime)
 				if dist <= 10 and is_ranged_weapon(wielded) then any_gun = true end
 			end
 		end
-		if not any_threatened and not any_gun then
+		if not any_threatened and not any_gun and not state.shooting then
 			if state.taurus_ent then
 				detach_taurus(state.taurus_ent)
 				state.taurus_ent = nil
