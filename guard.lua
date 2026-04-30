@@ -4,9 +4,30 @@
 local S = core.get_translator("minerland_fix_npc")
 local mcl = core.get_modpath("mcl_core") ~= nil
 
-local QUEEN      = core.settings:get("minerland_guard_queen")      or "amelaye"
-local GREET_DIST = tonumber(core.settings:get("minerland_guard_greet_dist")) or 3
-local THREAT_DIST= tonumber(core.settings:get("minerland_guard_threat_dist")) or 3
+local QUEEN = core.settings:get("minerland_guard_queen")
+if not QUEEN then QUEEN = "amelaye" end
+ 
+local GREET_DIST = tonumber(core.settings:get("minerland_guard_greet_dist"))
+if not GREET_DIST then GREET_DIST = 3 end
+ 
+local THREAT_DIST = tonumber(core.settings:get("minerland_guard_threat_dist"))
+if not THREAT_DIST then THREAT_DIST = 3 end
+ 
+local SUSPECT = core.settings:get("minerland_guard_suspect")
+if not SUSPECT then SUSPECT = "Luffy0805" end
+ 
+local SUSPECT_DIST = tonumber(core.settings:get("minerland_guard_suspect_dist"))
+if not SUSPECT_DIST then SUSPECT_DIST = 10 end
+ 
+local RESCUE_DIST = tonumber(core.settings:get("minerland_guard_rescue_dist"))
+if not RESCUE_DIST then RESCUE_DIST = 20 end
+ 
+local GUARD_COLOR = core.settings:get("minerland_guard_color")
+if not GUARD_COLOR then GUARD_COLOR = "#ff4500" end
+
+
+-- garde d'urgence actif (un seul à la fois)
+local rescue_guard_obj = nil
 
 -- détecte toute arme rangedweapons
 local function is_ranged_weapon(item_name)
@@ -20,12 +41,13 @@ guard_states = setmetatable({}, {__mode = "k"})
 local function get_state(obj)
 	if not guard_states[obj] then
 		guard_states[obj] = {
-			greeted    = {},
-			threatened = {},
-			bowing     = false,
-			lead_warned= {},
-			gun_warned = {},
-			shooting   = false,
+			greeted        = {},
+			threatened     = {},
+			bowing         = false,
+			lead_warned    = {},
+			gun_warned     = {},
+			shooting       = false,
+			suspect_warned = {},
 		}
 	end
 	return guard_states[obj]
@@ -192,7 +214,7 @@ function lower_arm(obj)
 end
 
 mobs:register_mob("minerland_fix_npc:guard", {
-	description = S("Guard"),
+	description = "Garde Royale",
 	type = "npc",
 	passive = true,
 	damage = 8,
@@ -258,7 +280,7 @@ mobs:register_mob("minerland_fix_npc:guard", {
 		local stick = mcl and "mcl_core:stick" or "default:stick"
 		if item:get_name() == stick and name == QUEEN then
 			core.chat_send_player(name,
-				"<" .. (self.nametag or S("Guard")) .. "> " ..
+				core.colorize(GUARD_COLOR, "<" .. (self.nametag or "Garde Royale") .. ">") .. " " ..
 				S("À vos ordres, majesté."))
 		end
 	end,
@@ -354,6 +376,29 @@ core.register_globalstep(function(dtime)
 			local dist    = vector.distance(pos, ppos)
 			local wielded = player:get_wielded_item():get_name()
 
+			-- surveillance du suspect
+			if pname == SUSPECT then
+				if dist <= SUSPECT_DIST and not state.suspect_warned[pname] then
+					state.suspect_warned[pname] = true
+					local dir = vector.subtract(ppos, pos)
+					obj.object:set_yaw(math.atan2(-dir.x, dir.z))
+					if not state.taurus_ent then
+						state.taurus_ent = attach_taurus(obj.object)
+					end
+					raise_arm(obj.object)
+					core.chat_send_player(pname,
+						core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
+						"Je toi surveille, sale mécréant, délinquant, traitre !")
+				elseif dist > SUSPECT_DIST and state.suspect_warned[pname] then
+					state.suspect_warned[pname] = nil
+					if not any_gun and not any_threatened then
+						detach_taurus(state.taurus_ent)
+						state.taurus_ent = nil
+						lower_arm(obj.object)
+					end
+				end
+			end
+
 			-- détection arme
 			if dist <= 10 and is_ranged_weapon(wielded) then
 				local dir = vector.subtract(ppos, pos)
@@ -364,7 +409,7 @@ core.register_globalstep(function(dtime)
 						state.taurus_ent = attach_taurus(obj.object)
 					end
 					raise_arm(obj.object)
-					core.chat_send_all("<" .. (obj.nametag or S("Guard")) .. "> BAISSEZ VOTRE ARME !! TOUT DE SUITE !!!")
+					core.chat_send_all(core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " BAISSEZ VOTRE ARME !! TOUT DE SUITE !!!")
 					core.after(5, function()
 						if state.gun_warned then state.gun_warned[pname] = nil end
 					end)
@@ -389,7 +434,7 @@ core.register_globalstep(function(dtime)
 						end
 					end)
 					core.chat_send_player(pname,
-						"<" .. (obj.nametag or S("Guard")) .. "> " ..
+						core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
 						S("Oses-tu m'attacher ?!"))
 					core.after(3, function()
 						if state.lead_warned then state.lead_warned[pname] = nil end
@@ -412,7 +457,7 @@ core.register_globalstep(function(dtime)
 					state.bowing = true
 					bow(obj.object)
 					core.chat_send_player(pname,
-						"<" .. (obj.nametag or S("Guard")) .. "> " ..
+						core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
 						S("Bonjour votre majesté !"))
 					local o = obj.object
 					local st = state
@@ -431,7 +476,7 @@ core.register_globalstep(function(dtime)
 					end
 					raise_arm(obj.object)
 					core.chat_send_player(pname,
-						"<" .. (obj.nametag or S("Guard")) .. "> " ..
+						core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
 						S("Halte ! Vous n'êtes pas autorisé ici !"))
 				elseif dist > THREAT_DIST and state.threatened[pname] then
 					state.threatened[pname] = nil
@@ -450,55 +495,185 @@ core.register_globalstep(function(dtime)
 	end
 end)
 
--- spawn egg
-mobs:register_egg("minerland_fix_npc:guard", S("Guard"),
-	mcl and "mcl_core:iron_block.png" or "default_steel_block.png", 1)
-
--- réserve l'oeuf aux admins
-core.register_on_mods_loaded(function()
-	if not core.registered_items["minerland_fix_npc:guard"] then return end
-
-	core.override_item("minerland_fix_npc:guard", {
-		on_place = function(itemstack, placer, pointed_thing)
-			if not placer or not placer:is_player() then return end
-			local pname = placer:get_player_name()
-			if not core.check_player_privs(placer, {server = true}) then
-				core.chat_send_player(pname,
-					S("Vous n'avez pas la permission d'invoquer un garde."))
-				local privs = core.get_player_privs(pname)
-				local had_fly = privs.fly
-				if had_fly then
-					privs.fly = false
-					core.set_player_privs(pname, privs)
-				end
-				local dir = placer:get_look_dir()
-				dir.y = 0
-				placer:add_velocity({
-					x = vector.multiply(vector.normalize(dir), -15).x,
-					y = 12,
-					z = vector.multiply(vector.normalize(dir), -15).z,
-				})
-				core.after(3, function()
-					if had_fly then
-						privs.fly = true
-						core.set_player_privs(pname, privs)
-					end
-				end)
-				return itemstack
-			end
-			local pos = core.get_pointed_thing_position(pointed_thing, true)
-			if pos then
-				pos.y = pos.y + 1.0
-				core.add_entity(pos, "minerland_fix_npc:guard")
-				if not core.is_creative_enabled(pname) then
-					itemstack:take_item()
-				end
-			end
+-- oeuf du garde : invisible dans le créatif, obtention uniquement via /give
+-- le on_place reste comme garde-fou si un non-admin l'obtient quand même
+core.register_craftitem("minerland_fix_npc:guard", {
+	description = "Garde Royale",
+	inventory_image = mcl and "mcl_core:iron_block.png" or "default_steel_block.png",
+	groups = {not_in_creative_list = 1},
+	on_place = function(itemstack, placer, pointed_thing)
+		if not placer or not placer:is_player() then return end
+		local pname = placer:get_player_name()
+		if not core.check_player_privs(placer, {server = true}) then
+			core.chat_send_player(pname,
+				S("Vous n'avez pas la permission d'invoquer un garde."))
 			return itemstack
 		end
-	})
+		local pos = core.get_pointed_thing_position(pointed_thing, true)
+		if pos then
+			pos.y = pos.y + 1.0
+			core.add_entity(pos, "minerland_fix_npc:guard")
+			if not core.is_creative_enabled(pname) then
+				itemstack:take_item()
+			end
+		end
+		return itemstack
+	end,
+})
 
+core.register_on_mods_loaded(function()
 	if leads and leads.custom_leashable_entities then
 		leads.custom_leashable_entities["minerland_fix_npc:guard"] = false
 	end
 end)
+
+-- ============================================================
+-- /osecour : appel d'un garde d'urgence contre Luffy0805
+-- ============================================================
+
+core.register_chatcommand("osecour", {
+	description = S("Appelle un garde d'urgence contre le suspect."),
+	func = function(name, param)
+		-- Luffy ne peut pas appeler à l'aide contre lui-même
+		if name == SUSPECT then
+			return false, "<Garde> Non."
+		end
+
+		local caller = core.get_player_by_name(name)
+		if not caller then return false, "" end
+
+		-- vérifie que Luffy est connecté
+		local luffy = core.get_player_by_name(SUSPECT)
+		if not luffy then
+			return false, S("Le suspect n'est pas connecté.")
+		end
+
+		-- un seul garde d'urgence à la fois
+		if rescue_guard_obj and rescue_guard_obj:get_pos() then
+			return false, S("Un garde est déjà en intervention !")
+		end
+
+		-- détection prison et tp home si nécessaire
+		local caller_pos = caller:get_pos()
+		local PRISON_MIN = {x = -1806, y = -1144,   z = -2120}
+		local PRISON_MAX = {x = -1781, y = -1121.9, z = -2064}
+		local in_prison = (
+			caller_pos.x >= PRISON_MIN.x and caller_pos.x <= PRISON_MAX.x and
+			caller_pos.y >= PRISON_MIN.y and caller_pos.y <= PRISON_MAX.y and
+			caller_pos.z >= PRISON_MIN.z and caller_pos.z <= PRISON_MAX.z
+		)
+
+		-- spawn sur Luffy
+		local luffy_pos = luffy:get_pos()
+		luffy_pos.y = luffy_pos.y + 1.0
+		local obj = core.add_entity(luffy_pos, "minerland_fix_npc:guard")
+		if not obj then
+			return false, S("Impossible d'invoquer un garde.")
+		end
+
+		rescue_guard_obj = obj
+
+		-- message d'arrivée
+		core.chat_send_all(core.colorize(GUARD_COLOR, "<Garde Royale>") .. " J'arrive vous sauver citoyen !")
+
+		-- si le joueur était en prison, le tp chez lui 5 secondes après
+		if in_prison then
+			core.chat_send_player(name, S("La Garde Royale est en route ! Vous serez mis en sécurité dans 5 secondes..."))
+			core.after(5, function()
+				local p = core.get_player_by_name(name)
+				if not p then return end
+				local sh_storage = core.get_mod_storage()
+				local home_str = sh_storage:get_string("home_" .. name)
+				if not home_str or home_str == "" then
+					core.chat_send_player(name, S("Aucun home défini, impossible de vous téléporter."))
+					return
+				end
+				local hpos = core.deserialize(home_str)
+				if not hpos then
+					core.chat_send_player(name, S("Home corrompu, impossible de vous téléporter."))
+					return
+				end
+				p:set_pos(hpos)
+				core.chat_send_player(name, S("Vous voici en sécurité, citoyen !"))
+			end)
+		end
+
+		-- configure le garde pour poursuivre et attaquer Luffy
+		local ent = obj:get_luaentity()
+		if ent then
+			ent.order         = "follow"
+			ent.attack_players = true
+			ent.owner         = name  -- suit le appelant d'abord
+
+			-- force la poursuite de Luffy via un globalstep dédié
+			local guard_ref = obj
+			local check_timer = 0
+			local step_id = {}  -- table pour pouvoir annuler
+
+			local function rescue_step(dtime)
+				check_timer = check_timer + dtime
+				if check_timer < 0.2 then return end
+				check_timer = 0
+
+				-- garde supprimé ?
+				if not guard_ref or not guard_ref:get_pos() then
+					core.unregister_globalstep(step_id[1])
+					rescue_guard_obj = nil
+					return
+				end
+
+				local lp = core.get_player_by_name(SUSPECT)
+				local gpos = guard_ref:get_pos()
+
+				-- Luffy déconnecté ou trop loin : le garde disparaît
+				if not lp or not lp:get_pos() or
+				   vector.distance(gpos, lp:get_pos()) > RESCUE_DIST then
+					core.chat_send_all(core.colorize(GUARD_COLOR, "<Garde Royale>") .. " Suspect hors de portée. Je rentre.")
+					guard_ref:remove()
+					rescue_guard_obj = nil
+					core.unregister_globalstep(step_id[1])
+					return
+				end
+
+				-- oriente et force le mouvement vers Luffy
+				local lpos = lp:get_pos()
+				local dir  = vector.normalize(vector.subtract(lpos, gpos))
+				guard_ref:set_yaw(math.atan2(-dir.x, dir.z))
+
+				local ge = guard_ref:get_luaentity()
+				if ge then
+					ge.object:set_velocity({
+						x = dir.x * 5,
+						y = 0,
+						z = dir.z * 5,
+					})
+					-- dégâts au contact + fly retiré + knockback (même logique que la balle)
+					if vector.distance(gpos, lpos) < 1.5 then
+						local privs = core.get_player_privs(SUSPECT)
+						local had_fly = privs.fly
+						if had_fly then
+							privs.fly = nil
+							core.set_player_privs(SUSPECT, privs)
+							core.after(30, function()
+								local p = core.get_player_by_name(SUSPECT)
+								if p then
+									local p_privs = core.get_player_privs(SUSPECT)
+									p_privs.fly = true
+									core.set_player_privs(SUSPECT, p_privs)
+								end
+							end)
+						end
+						local hp = lp:get_hp()
+						lp:set_hp(math.max(0, hp - 4))
+						lp:add_velocity({x = dir.x * 20, y = 15, z = dir.z * 20})
+					end
+				end
+			end
+
+			step_id[1] = rescue_step
+			core.register_globalstep(rescue_step)
+		end
+
+		return true, ""
+	end,
+})

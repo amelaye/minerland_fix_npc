@@ -17,6 +17,11 @@ local SKINS = {
 		"mobs_npc4.png",
 		"mobs_npc5.png",
 		"mobs_npc6.png",
+		"mobs_npc7.png",
+		"mobs_npc8.png",
+		"mobs_npc9.png",
+		"mobs_npc10.png",
+		"mobs_npc11.png",
 	},
 	["mobs_npc:igor"] = {
 		"mobs_igor.png",
@@ -33,6 +38,11 @@ local SKINS = {
 		"mobs_trader2.png",
 		"mobs_trader3.png",
 		"mobs_trader4.png",
+		"mobs_trader5.png",
+		"mobs_trader6.png",
+		"mobs_trader7.png",
+		"mobs_trader8.png",
+		"mobs_trader9.png",
 	},
 	["minerland_fix_npc:guard"] = {
 		"minerland_guard1.png",
