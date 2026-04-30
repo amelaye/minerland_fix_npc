@@ -93,7 +93,7 @@ core.register_entity("minerland_fix_npc:taurus_visual", {
 		pointable = false,
 		visual = "wielditem",
 		textures = {"rangedweapons:taurus"},
-		visual_size = {x = 0.13, y = 0.13},
+		visual_size = {x = 0.20, y = 0.20},
 		is_visible = true,
 	},
 	on_activate = function(self, staticdata)
@@ -335,7 +335,7 @@ core.register_globalstep(function(dtime)
 								if not shooter or not shooter:get_pos() then return end
 								fire_bullet(gobj, shooter)
 							end)
-							core.after(3, function()
+							core.after(8, function()
 								state.shooting = false
 							end)
 						end
