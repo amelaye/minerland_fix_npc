@@ -220,6 +220,8 @@ end
 mobs:register_mob("minerland_fix_npc:guard", {
 	description = "Garde Royale",
 	type = "npc",
+	nametag = core.colorize(GUARD_COLOR, "Garde Royale"),
+	nametag_color = GUARD_COLOR,
 	passive = true,
 	damage = 8,
 	attack_type = "dogfight",
