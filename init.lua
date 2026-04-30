@@ -49,7 +49,6 @@ local SKINS = {
 		"minerland_guard2.png",
 		"minerland_guard3.png",
 		"minerland_guard4.png",
-		"minerland_guard5.png",
 	},
 }
 
