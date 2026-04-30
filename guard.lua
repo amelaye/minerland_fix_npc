@@ -163,9 +163,12 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
     					" Vous avez le fly désactivé 30 secondes.")
 					privs.fly = nil
 					core.set_player_privs(pname, privs)
+					local t = core.get_us_time()
 					core.after(30, function()
 						local p = core.get_player_by_name(pname)
-						if p then
+						if not p then return end
+						-- ne rend le fly que si aucun retrait plus récent
+						if core.get_us_time() - t < 31000000 then
 							local p_privs = core.get_player_privs(pname)
 							p_privs.fly = true
 							core.set_player_privs(pname, p_privs)
