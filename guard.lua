@@ -394,7 +394,9 @@ core.register_globalstep(function(dtime)
 					-- 3) message une seule fois
 					if not state.suspect_warned[pname] then
 						state.suspect_warned[pname] = true
-						core.chat_send_player(pname, ...)
+						core.chat_send_player(pname,
+							core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
+							"Je toi surveille, sale mécréant, délinquant, traitre !")
 					end
 				elseif dist > SUSPECT_DIST and state.suspect_warned[pname] then
 					state.suspect_warned[pname] = nil
