@@ -70,7 +70,7 @@ local function eject(player, pname, gpos)
 	local privs = core.get_player_privs(pname)
 	local had_fly = privs.fly
 	if had_fly then
-		privs.fly = nil
+		privs.fly = false
 		core.set_player_privs(pname, privs)
 	end
 	local ppos = player:get_pos()
@@ -382,17 +382,22 @@ core.register_globalstep(function(dtime)
 
 			-- surveillance du suspect
 			if pname == SUSPECT then
-				if dist <= SUSPECT_DIST and not state.suspect_warned[pname] then
-					state.suspect_warned[pname] = true
+				if dist <= SUSPECT_DIST then
+					-- 1) rotation vers Luffy à chaque tick
 					local dir = vector.subtract(ppos, pos)
 					obj.object:set_yaw(math.atan2(-dir.x, dir.z))
-					if not state.taurus_ent then
-						state.taurus_ent = attach_taurus(obj.object)
+					-- 2) message une seule fois
+					if not state.suspect_warned[pname] then
+						state.suspect_warned[pname] = true
+						core.chat_send_player(pname,
+							core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
+							"Toi je te surveille, sale mécréant, délinquant, traitre de la Royauté !")
+						-- 3) brandir l'arme
+						if not state.taurus_ent then
+							state.taurus_ent = attach_taurus(obj.object)
+						end
+						raise_arm(obj.object)
 					end
-					raise_arm(obj.object)
-					core.chat_send_player(pname,
-						core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
-						"Je toi surveille, sale mécréant, délinquant, traitre !")
 				elseif dist > SUSPECT_DIST and state.suspect_warned[pname] then
 					state.suspect_warned[pname] = nil
 					if not any_gun and not any_threatened then
