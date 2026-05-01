@@ -96,7 +96,7 @@ core.register_entity("minerland_fix_npc:taurus_visual", {
 		pointable = false,
 		visual = "wielditem",
 		textures = {"rangedweapons:taurus"},
-		visual_size = {x = 0.13, y = 0.13},
+		visual_size = {x = 0.20, y = 0.20},
 		is_visible = true,
 	},
 	on_activate = function(self, staticdata)
@@ -163,11 +163,11 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 				if had_fly then
 					core.chat_send_player(pname,
 						core.colorize(GUARD_COLOR, "<Garde Royale>") ..
-						" Vous avez le fly désactivé trente secondes.")
+						" Vous avez le fly désactivé 10 secondes.")
 					privs.fly = nil
 					core.set_player_privs(pname, privs)
 					local t1 = core.get_us_time()
-					core.after(30, function()
+					core.after(10, function()
 						local p = core.get_player_by_name(pname)
 						if not p then return end
 						if core.get_us_time() - t1 < 31000000 then
@@ -396,7 +396,7 @@ core.register_globalstep(function(dtime)
 						state.suspect_warned[pname] = true
 						core.chat_send_player(pname,
 							core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
-							"Je toi surveille, sale mécréant, délinquant, traitre !")
+							"Je te surveille toi, sale mécréant, délinquant, traitre !")
 						-- 3) brandir l'arme
 						if not state.taurus_ent then
 							state.taurus_ent = attach_taurus(obj.object)
@@ -680,11 +680,11 @@ core.register_chatcommand("osecour", {
 						if had_fly then
 							core.chat_send_player(SUSPECT,
 								core.colorize(GUARD_COLOR, "<Garde Royale>") ..
-								" Vous avez le fly désactivé trente secondes.")
+								" Vous avez le fly désactivé 10 secondes.")
 							privs.fly = nil
 							core.set_player_privs(SUSPECT, privs)
 							local t2 = core.get_us_time()
-							core.after(30, function()
+							core.after(10, function()
 								local p = core.get_player_by_name(SUSPECT)
 								if not p then return end
 								if core.get_us_time() - t2 < 31000000 then
