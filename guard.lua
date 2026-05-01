@@ -524,7 +524,7 @@ end)
 -- le on_place reste comme garde-fou si un non-admin l'obtient quand même
 core.register_craftitem("minerland_fix_npc:guard", {
 	description = "Garde Royale",
-	inventory_image = "mobs_spawn_egg.png",
+	inventory_image = "mobs_chicken_egg.png",
 	groups = {not_in_creative_list = 1, not_in_creative_inventory = 1},
 	on_place = function(itemstack, placer, pointed_thing)
 		if not placer or not placer:is_player() then return end
