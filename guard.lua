@@ -365,7 +365,9 @@ core.register_globalstep(function(dtime)
 				if dist <= 10 and is_ranged_weapon(wielded) then any_gun = true end
 			end
 		end
-		if not any_threatened and not any_gun then
+		local any_global_gun = false
+		for k, _ in pairs(global_gun_warned) do any_global_gun = true break end
+		if not any_threatened and not any_gun and not any_global_gun and not state.shooting then
 			if state.taurus_ent then
 				detach_taurus(state.taurus_ent)
 				state.taurus_ent = nil
@@ -413,18 +415,28 @@ core.register_globalstep(function(dtime)
 
 			-- détection arme
 			if dist <= 10 and is_ranged_weapon(wielded) then
+				-- rotation vers le joueur armé à chaque tick
 				local dir = vector.subtract(ppos, pos)
 				obj.object:set_yaw(math.atan2(-dir.x, dir.z))
+				-- bras levé + taurus à chaque tick
+				if not state.taurus_ent then
+					state.taurus_ent = attach_taurus(obj.object)
+				end
+				raise_arm(obj.object)
+				-- message une seule fois par période de 30s
 				if not global_gun_warned[pname] then
 					global_gun_warned[pname] = true
-					if not state.taurus_ent then
-						state.taurus_ent = attach_taurus(obj.object)
-					end
-					raise_arm(obj.object)
 					core.chat_send_player(pname, core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " BAISSEZ VOTRE ARME !! TOUT DE SUITE !!!")
 					core.after(30, function()
 						global_gun_warned[pname] = nil
 					end)
+				end
+			else
+				-- joueur a rangé son arme : bras baissé
+				if state.taurus_ent and not any_threatened then
+					detach_taurus(state.taurus_ent)
+					state.taurus_ent = nil
+					lower_arm(obj.object)
 				end
 			end
 
