@@ -147,8 +147,15 @@ local function apply_order(self, order)
 	if order == "stand" then
 		self.state = "stand"
 		self.attack = nil
+		self.following = nil
+		self.path = nil
 		self:set_animation("stand")
 		self:set_velocity(0)
+		self.object:set_velocity({x = 0, y = 0, z = 0})
+	elseif order == "wander" then
+		self.state = "walk"
+		self.following = nil
+		self.path = nil
 	end
 end
 
