@@ -163,11 +163,11 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 				if had_fly then
 					core.chat_send_player(pname,
 						core.colorize(GUARD_COLOR, "<Garde Royale>") ..
-						" Vous avez le fly désactivé trente secondes.")
+						" Vous avez le fly désactivé 10 secondes.")
 					privs.fly = nil
 					core.set_player_privs(pname, privs)
 					local t1 = core.get_us_time()
-					core.after(30, function()
+					core.after(10, function()
 						local p = core.get_player_by_name(pname)
 						if not p then return end
 						if core.get_us_time() - t1 < 31000000 then
@@ -396,7 +396,7 @@ core.register_globalstep(function(dtime)
 						state.suspect_warned[pname] = true
 						core.chat_send_player(pname,
 							core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
-							"Je toi surveille, sale mécréant, délinquant, traitre !")
+							"Je te surveille toi, sale mécréant, délinquant, traitre !")
 						-- 3) brandir l'arme
 						if not state.taurus_ent then
 							state.taurus_ent = attach_taurus(obj.object)
@@ -524,8 +524,8 @@ end)
 -- le on_place reste comme garde-fou si un non-admin l'obtient quand même
 core.register_craftitem("minerland_fix_npc:guard", {
 	description = "Garde Royale",
-	inventory_image = "mobs_egg.png",
-	groups = {not_in_creative_list = 1},
+	inventory_image = "mobs_spawn_egg.png",
+	groups = {not_in_creative_inventory = 1},
 	on_place = function(itemstack, placer, pointed_thing)
 		if not placer or not placer:is_player() then return end
 		local pname = placer:get_player_name()
@@ -680,11 +680,11 @@ core.register_chatcommand("osecour", {
 						if had_fly then
 							core.chat_send_player(SUSPECT,
 								core.colorize(GUARD_COLOR, "<Garde Royale>") ..
-								" Vous avez le fly désactivé trente secondes.")
+								" Vous avez le fly désactivé 10 secondes.")
 							privs.fly = nil
 							core.set_player_privs(SUSPECT, privs)
 							local t2 = core.get_us_time()
-							core.after(30, function()
+							core.after(10, function()
 								local p = core.get_player_by_name(SUSPECT)
 								if not p then return end
 								if core.get_us_time() - t2 < 31000000 then
