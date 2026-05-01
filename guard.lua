@@ -426,8 +426,6 @@ core.register_globalstep(function(dtime)
 						global_gun_warned[pname] = nil
 					end)
 				end
-			else
-				if global_gun_warned[pname] then global_gun_warned[pname] = nil end
 			end
 
 			-- éjection laisse
