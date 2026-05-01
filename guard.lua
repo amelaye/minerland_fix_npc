@@ -28,6 +28,9 @@ if not GUARD_COLOR then GUARD_COLOR = "#FF0000" end
 -- garde d'urgence actif (un seul à la fois)
 local rescue_guard_obj = nil
 
+-- avertissement arme global (un seul message par joueur, tous gardes confondus)
+local global_gun_warned = {}
+
 -- détecte toute arme rangedweapons
 local function is_ranged_weapon(item_name)
 	local def = core.registered_items[item_name]
@@ -70,7 +73,7 @@ local function eject(player, pname, gpos)
 	local privs = core.get_player_privs(pname)
 	local had_fly = privs.fly
 	if had_fly then
-		privs.fly = nil
+		privs.fly = false
 		core.set_player_privs(pname, privs)
 	end
 	local ppos = player:get_pos()
@@ -160,11 +163,11 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 				if had_fly then
 					core.chat_send_player(pname,
 						core.colorize(GUARD_COLOR, "<Garde Royale>") ..
-						" Vous avez le fly désactivé 10 secondes.")
+						" Vous avez le fly désactivé trente secondes.")
 					privs.fly = nil
 					core.set_player_privs(pname, privs)
 					local t1 = core.get_us_time()
-					core.after(10, function()
+					core.after(30, function()
 						local p = core.get_player_by_name(pname)
 						if not p then return end
 						if core.get_us_time() - t1 < 31000000 then
@@ -239,6 +242,7 @@ mobs:register_mob("minerland_fix_npc:guard", {
 		{"minerland_guard2.png"},
 		{"minerland_guard3.png"},
 		{"minerland_guard4.png"},
+		{"minerland_guard5.png"},
 	},
 	makes_footstep_sound = true,
 	sounds = {},
@@ -382,20 +386,20 @@ core.register_globalstep(function(dtime)
 			-- surveillance du suspect
 			if pname == SUSPECT then
 				if dist <= SUSPECT_DIST then
-					-- 1) rotation à chaque tick
+					-- 1) rotation vers Luffy à chaque tick
 					local dir = vector.subtract(ppos, pos)
 					obj.object:set_yaw(math.atan2(-dir.x, dir.z))
-					-- 2) arme brandie à chaque tick
-					if not state.taurus_ent then
-						state.taurus_ent = attach_taurus(obj.object)
-					end
-					raise_arm(obj.object)
-					-- 3) message une seule fois
+					-- 2) message une seule fois
 					if not state.suspect_warned[pname] then
 						state.suspect_warned[pname] = true
 						core.chat_send_player(pname,
 							core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
 							"Je toi surveille, sale mécréant, délinquant, traitre !")
+						-- 3) brandir l'arme
+						if not state.taurus_ent then
+							state.taurus_ent = attach_taurus(obj.object)
+						end
+						raise_arm(obj.object)
 					end
 				elseif dist > SUSPECT_DIST and state.suspect_warned[pname] then
 					state.suspect_warned[pname] = nil
@@ -411,19 +415,19 @@ core.register_globalstep(function(dtime)
 			if dist <= 10 and is_ranged_weapon(wielded) then
 				local dir = vector.subtract(ppos, pos)
 				obj.object:set_yaw(math.atan2(-dir.x, dir.z))
-				if not state.gun_warned[pname] then
-					state.gun_warned[pname] = true
+				if not global_gun_warned[pname] then
+					global_gun_warned[pname] = true
 					if not state.taurus_ent then
 						state.taurus_ent = attach_taurus(obj.object)
 					end
 					raise_arm(obj.object)
-					core.chat_send_player(core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " BAISSEZ VOTRE ARME !! TOUT DE SUITE !!!")
+					core.chat_send_player(pname, core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " BAISSEZ VOTRE ARME !! TOUT DE SUITE !!!")
 					core.after(30, function()
-						if state.gun_warned then state.gun_warned[pname] = nil end
+						global_gun_warned[pname] = nil
 					end)
 				end
 			else
-				if state.gun_warned[pname] then state.gun_warned[pname] = nil end
+				if global_gun_warned[pname] then global_gun_warned[pname] = nil end
 			end
 
 			-- éjection laisse
@@ -566,8 +570,8 @@ core.register_chatcommand("osecour", {
 
 		-- détection prison et tp home si nécessaire
 		local caller_pos = caller:get_pos()
-		local PRISON_MIN = {x = -1820, y = -1144, z = -2129}
-		local PRISON_MAX = {x = -1763, y = -1139, z = -2072}
+		local PRISON_MIN = {x = -1806, y = -1144,   z = -2120}
+		local PRISON_MAX = {x = -1781, y = -1121.9, z = -2064}
 		local in_prison = (
 			caller_pos.x >= PRISON_MIN.x and caller_pos.x <= PRISON_MAX.x and
 			caller_pos.y >= PRISON_MIN.y and caller_pos.y <= PRISON_MAX.y and
@@ -585,7 +589,7 @@ core.register_chatcommand("osecour", {
 		rescue_guard_obj = obj
 
 		-- message d'arrivée
-		core.chat_send_player(core.colorize(GUARD_COLOR, "<Garde Royale>") .. " J'arrive vous sauver citoyen !")
+		core.chat_send_all(core.colorize(GUARD_COLOR, "<Garde Royale>") .. " J'arrive vous sauver citoyen !")
 
 		-- si le joueur était en prison, le tp chez lui 5 secondes après
 		if in_prison then
@@ -627,8 +631,8 @@ core.register_chatcommand("osecour", {
 				check_timer = 0
 
 				-- garde supprimé ?
-				local ok, gpos = pcall(function() return guard_ref:get_pos() end)
-				if not ok or not gpos then
+				local ok, gpos_check = pcall(function() return guard_ref:get_pos() end)
+				if not ok or not gpos_check then
 					core.unregister_globalstep(step_id[1])
 					rescue_guard_obj = nil
 					return
@@ -640,7 +644,7 @@ core.register_chatcommand("osecour", {
 				-- Luffy déconnecté ou trop loin : le garde disparaît
 				if not lp or not lp:get_pos() or
 				   vector.distance(gpos, lp:get_pos()) > RESCUE_DIST then
-					core.chat_send_player(core.colorize(GUARD_COLOR, "<Garde Royale>") .. " Suspect hors de portée. Je rentre.")
+					core.chat_send_all(core.colorize(GUARD_COLOR, "<Garde Royale>") .. " Suspect hors de portée. Je rentre.")
 					guard_ref:remove()
 					rescue_guard_obj = nil
 					core.unregister_globalstep(step_id[1])
@@ -666,7 +670,7 @@ core.register_chatcommand("osecour", {
 						if had_fly then
 							core.chat_send_player(SUSPECT,
 								core.colorize(GUARD_COLOR, "<Garde Royale>") ..
-								" Vous avez le fly désactivé 30 secondes.")
+								" Vous avez le fly désactivé trente secondes.")
 							privs.fly = nil
 							core.set_player_privs(SUSPECT, privs)
 							local t2 = core.get_us_time()
