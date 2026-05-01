@@ -417,8 +417,8 @@ core.register_globalstep(function(dtime)
 						state.taurus_ent = attach_taurus(obj.object)
 					end
 					raise_arm(obj.object)
-					core.chat_send_all(core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " BAISSEZ VOTRE ARME !! TOUT DE SUITE !!!")
-					core.after(5, function()
+					core.chat_send_player(core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " BAISSEZ VOTRE ARME !! TOUT DE SUITE !!!")
+					core.after(30, function()
 						if state.gun_warned then state.gun_warned[pname] = nil end
 					end)
 				end
@@ -585,7 +585,7 @@ core.register_chatcommand("osecour", {
 		rescue_guard_obj = obj
 
 		-- message d'arrivée
-		core.chat_send_all(core.colorize(GUARD_COLOR, "<Garde Royale>") .. " J'arrive vous sauver citoyen !")
+		core.chat_send_player(core.colorize(GUARD_COLOR, "<Garde Royale>") .. " J'arrive vous sauver citoyen !")
 
 		-- si le joueur était en prison, le tp chez lui 5 secondes après
 		if in_prison then
@@ -627,7 +627,8 @@ core.register_chatcommand("osecour", {
 				check_timer = 0
 
 				-- garde supprimé ?
-				if not guard_ref or not guard_ref:get_pos() then
+				local ok, gpos = pcall(function() return guard_ref:get_pos() end)
+				if not ok or not gpos then
 					core.unregister_globalstep(step_id[1])
 					rescue_guard_obj = nil
 					return
@@ -639,7 +640,7 @@ core.register_chatcommand("osecour", {
 				-- Luffy déconnecté ou trop loin : le garde disparaît
 				if not lp or not lp:get_pos() or
 				   vector.distance(gpos, lp:get_pos()) > RESCUE_DIST then
-					core.chat_send_all(core.colorize(GUARD_COLOR, "<Garde Royale>") .. " Suspect hors de portée. Je rentre.")
+					core.chat_send_player(core.colorize(GUARD_COLOR, "<Garde Royale>") .. " Suspect hors de portée. Je rentre.")
 					guard_ref:remove()
 					rescue_guard_obj = nil
 					core.unregister_globalstep(step_id[1])
