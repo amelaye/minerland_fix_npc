@@ -96,7 +96,7 @@ core.register_entity("minerland_fix_npc:taurus_visual", {
 		pointable = false,
 		visual = "wielditem",
 		textures = {"rangedweapons:taurus"},
-		visual_size = {x = 0.13, y = 0.13},
+		visual_size = {x = 0.20, y = 0.20},
 		is_visible = true,
 	},
 	on_activate = function(self, staticdata)
@@ -170,7 +170,7 @@ core.register_entity("minerland_fix_npc:guard_bullet", {
 					core.after(10, function()
 						local p = core.get_player_by_name(pname)
 						if not p then return end
-						if core.get_us_time() - t1 < 31000000 then
+						if core.get_us_time() - t1 < 11000000 then
 							local p_privs = core.get_player_privs(pname)
 							p_privs.fly = true
 							core.set_player_privs(pname, p_privs)
@@ -525,7 +525,7 @@ end)
 core.register_craftitem("minerland_fix_npc:guard", {
 	description = "Garde Royale",
 	inventory_image = "mobs_spawn_egg.png",
-	groups = {not_in_creative_inventory = 1},
+	groups = {not_in_creative_list = 1, not_in_creative_inventory = 1},
 	on_place = function(itemstack, placer, pointed_thing)
 		if not placer or not placer:is_player() then return end
 		local pname = placer:get_player_name()
@@ -687,7 +687,7 @@ core.register_chatcommand("osecour", {
 							core.after(10, function()
 								local p = core.get_player_by_name(SUSPECT)
 								if not p then return end
-								if core.get_us_time() - t2 < 31000000 then
+								if core.get_us_time() - t2 < 11000000 then
 									local p_privs = core.get_player_privs(SUSPECT)
 									p_privs.fly = true
 									core.set_player_privs(SUSPECT, p_privs)
