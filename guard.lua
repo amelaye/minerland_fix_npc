@@ -129,9 +129,14 @@ end
 
 -- helper : attache le taurus seulement si absent ou invalide
 local function ensure_taurus(state, guard_obj)
-	if not state.taurus_ent or not state.taurus_ent:get_pos() then
-		state.taurus_ent = attach_taurus(guard_obj)
-	end
+    local valid = false
+    if state.taurus_ent then
+        local ok, p = pcall(function() return state.taurus_ent:get_pos() end)
+        valid = ok and p ~= nil
+    end
+    if not valid then
+        state.taurus_ent = attach_taurus(guard_obj)
+    end
 end
 
 core.register_entity("minerland_fix_npc:guard_bullet", {
