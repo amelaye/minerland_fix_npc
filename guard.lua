@@ -35,6 +35,9 @@ local rescue_guard_obj = nil
 -- avertissement arme global (un seul message par joueur, tous gardes confondus)
 local global_gun_warned = {}
 
+-- avertissement suspect global (un seul message, tous gardes confondus)
+local global_suspect_warned = {}
+
 -- détecte toute arme rangedweapons
 local function is_ranged_weapon(item_name)
 	local def = core.registered_items[item_name]
@@ -458,21 +461,20 @@ core.register_globalstep(function(dtime)
 					obj.object:set_yaw(math.atan2(-dir.x, dir.z))
 					ensure_taurus(state, obj.object)
 					raise_arm(obj.object)
-					if not state.suspect_warned[pname] then
-						state.suspect_warned[pname] = true
+					if not global_suspect_warned[pname] then
+						global_suspect_warned[pname] = true
 						core.chat_send_player(pname,
 							core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
 							"Je te surveille toi, sale mécréant, délinquant, traitre !")
 					end
-				elseif dist > SUSPECT_DIST and state.suspect_warned[pname] then
-					state.suspect_warned[pname] = nil
+				elseif dist > SUSPECT_DIST and global_suspect_warned[pname] then
+					global_suspect_warned[pname] = nil
 					if not any_gun and not any_threatened then
 						detach_taurus(state.taurus_ent)
 						state.taurus_ent = nil
 						lower_arm(obj.object)
 					end
 				end
-				goto next_player
 			end
 
 			-- détection arme
