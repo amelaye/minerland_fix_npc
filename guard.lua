@@ -22,11 +22,12 @@ if not SUSPECT_DIST then SUSPECT_DIST = 10 end
 local RESCUE_DIST = tonumber(core.settings:get("minerland_guard_rescue_dist"))
 if not RESCUE_DIST then RESCUE_DIST = 20 end
 
-GUARD_COLOR = core.settings:get("minerland_guard_color")
-if not GUARD_COLOR then GUARD_COLOR = "#FF0000" end
-
 local WANDER_RADIUS = tonumber(core.settings:get("minerland_guard_wander_radius"))
 if not WANDER_RADIUS then WANDER_RADIUS = 10 end
+
+-- global pour être accessible depuis init.lua
+GUARD_COLOR = core.settings:get("minerland_guard_color")
+if not GUARD_COLOR then GUARD_COLOR = "#FF0000" end
 
 -- garde d'urgence actif (un seul à la fois)
 local rescue_guard_obj = nil
@@ -127,9 +128,14 @@ function detach_taurus(taurus_ent)
 	end
 end
 
--- helper : attache le taurus seulement si absent ou invalide
+-- attache le taurus seulement si absent ou invalide
 local function ensure_taurus(state, guard_obj)
-	if not state.taurus_ent or not state.taurus_ent:get_pos() then
+	local valid = false
+	if state.taurus_ent then
+		local ok, p = pcall(function() return state.taurus_ent:get_pos() end)
+		valid = ok and p ~= nil
+	end
+	if not valid then
 		state.taurus_ent = attach_taurus(guard_obj)
 	end
 end
@@ -282,13 +288,13 @@ mobs:register_mob("minerland_fix_npc:guard", {
 	end,
 
 	on_step = function(self, dtime)
-		-- freeze uniquement si stand
 		if self.order == "stand" then
 			self.object:set_velocity({x = 0, y = 0, z = 0})
 		end
 	end,
 
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
+		-- annule knockback immédiatement et pendant 0.5s
 		self.object:set_velocity({x = 0, y = 0, z = 0})
 		local gobj = self.object
 		for i = 1, 5 do
@@ -297,6 +303,32 @@ mobs:register_mob("minerland_fix_npc:guard", {
 					gobj:set_velocity({x = 0, y = 0, z = 0})
 				end
 			end)
+		end
+		-- riposte si joueur (pas la reine)
+		if puncher and puncher:is_player() then
+			local pname = puncher:get_player_name()
+			if pname ~= QUEEN then
+				local state = get_state(self.object)
+				if not state.shooting then
+					state.shooting = true
+					core.chat_send_player(pname,
+						core.colorize(GUARD_COLOR, "<" .. (self.nametag or "Garde Royale") .. ">") ..
+						" Interdit de frapper la Garde Royale !")
+					ensure_taurus(state, self.object)
+					raise_arm(self.object)
+					local sdir = vector.subtract(puncher:get_pos(), self.object:get_pos())
+					self.object:set_yaw(math.atan2(-sdir.x, sdir.z))
+					local gobj2 = self.object
+					core.after(0.1, function()
+						if not gobj2 or not gobj2:get_pos() then return end
+						if not puncher or not puncher:get_pos() then return end
+						fire_bullet(gobj2, puncher)
+					end)
+					core.after(3, function()
+						state.shooting = false
+					end)
+				end
+			end
 		end
 	end,
 
@@ -334,11 +366,9 @@ core.register_globalstep(function(dtime)
 			obj.object:set_velocity({x = 0, y = 0, z = 0})
 			obj:set_animation("stand")
 		elseif obj.order == "wander" then
-			-- stocke la position d'origine au premier tick en wander
 			if not obj._wander_origin then
 				obj._wander_origin = vector.new(pos.x, pos.y, pos.z)
 			end
-			-- hors rayon : reoriente vers le centre sans toucher à la vélocité
 			local dist_origin = vector.distance(
 				{x = pos.x, y = obj._wander_origin.y, z = pos.z},
 				obj._wander_origin
@@ -385,9 +415,10 @@ core.register_globalstep(function(dtime)
 			end
 		end
 
-		-- calcul any_threatened et any_gun pour ce garde
+		-- calcul des menaces pour ce garde
 		local any_threatened = false
 		local any_gun = false
+		local any_suspect = false
 		for _, player in ipairs(players) do
 			local ppos = player:get_pos()
 			if ppos then
@@ -395,21 +426,11 @@ core.register_globalstep(function(dtime)
 				local wielded = player:get_wielded_item():get_name()
 				if dist <= THREAT_DIST then any_threatened = true end
 				if dist <= 10 and is_ranged_weapon(wielded) then any_gun = true end
+				if player:get_player_name() == SUSPECT and dist <= SUSPECT_DIST then any_suspect = true end
 			end
 		end
 		local any_global_gun = false
 		for k, _ in pairs(global_gun_warned) do any_global_gun = true break end
-
-		local any_suspect = false
-		for _, player in ipairs(players) do
-			if player:get_player_name() == SUSPECT then
-				local ppos = player:get_pos()
-				if ppos and vector.distance(pos, ppos) <= SUSPECT_DIST then
-					any_suspect = true
-					break
-				end
-			end
-		end
 
 		-- reset si aucune menace
 		if not any_threatened and not any_gun and not any_global_gun and not state.shooting and not any_suspect then
@@ -433,12 +454,10 @@ core.register_globalstep(function(dtime)
 			-- surveillance du suspect
 			if pname == SUSPECT then
 				if dist <= SUSPECT_DIST then
-					-- rotation + arme à chaque tick
 					local dir = vector.subtract(ppos, pos)
 					obj.object:set_yaw(math.atan2(-dir.x, dir.z))
 					ensure_taurus(state, obj.object)
 					raise_arm(obj.object)
-					-- message une seule fois
 					if not state.suspect_warned[pname] then
 						state.suspect_warned[pname] = true
 						core.chat_send_player(pname,
@@ -453,16 +472,15 @@ core.register_globalstep(function(dtime)
 						lower_arm(obj.object)
 					end
 				end
+				goto next_player
 			end
 
 			-- détection arme
 			if dist <= 10 and is_ranged_weapon(wielded) then
-				-- rotation + bras levé à chaque tick
 				local dir = vector.subtract(ppos, pos)
 				obj.object:set_yaw(math.atan2(-dir.x, dir.z))
 				ensure_taurus(state, obj.object)
 				raise_arm(obj.object)
-				-- message une seule fois par 30s
 				if not global_gun_warned[pname] then
 					global_gun_warned[pname] = true
 					core.chat_send_player(pname,
@@ -473,8 +491,7 @@ core.register_globalstep(function(dtime)
 					end)
 				end
 			else
-				-- joueur a rangé son arme : bras baissé seulement si plus aucune menace et pas le suspect
-				if state.taurus_ent and not any_threatened and not any_gun and pname ~= SUSPECT then
+				if state.taurus_ent and not any_threatened and not any_gun then
 					detach_taurus(state.taurus_ent)
 					state.taurus_ent = nil
 					lower_arm(obj.object)
@@ -597,7 +614,7 @@ core.register_chatcommand("osecour", {
 	description = S("Appelle un garde d'urgence contre le suspect."),
 	func = function(name, param)
 		if name == SUSPECT then
-			return false, "<Garde> Non."
+			return false, core.colorize(GUARD_COLOR, "<Garde Royale>") .. " Non."
 		end
 
 		local caller = core.get_player_by_name(name)
