@@ -252,7 +252,6 @@ mobs:register_mob("minerland_fix_npc:guard", {
 		{"minerland_guard2.png"},
 		{"minerland_guard3.png"},
 		{"minerland_guard4.png"},
-		{"minerland_guard5.png"},
 	},
 	makes_footstep_sound = true,
 	sounds = {},
