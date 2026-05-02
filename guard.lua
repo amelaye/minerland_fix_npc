@@ -326,20 +326,19 @@ core.register_globalstep(function(dtime)
 			obj.object:set_velocity({x = 0, y = 0, z = 0})
 			obj:set_animation("stand")
 		elseif obj.order == "wander" then
-			-- stocke la position d'origine au premier tick en wander
-			if not obj._wander_origin then
-				obj._wander_origin = vector.new(pos.x, pos.y, pos.z)
-			end
-			-- hors rayon : stoppe et repart vers le centre
-			local dist_origin = vector.distance(
-				{x = pos.x, y = obj._wander_origin.y, z = pos.z},
-				obj._wander_origin
-			)
-			if dist_origin > WANDER_RADIUS then
-				obj.object:set_velocity({x = 0, y = 0, z = 0})
-				local back = vector.normalize(vector.subtract(obj._wander_origin, pos))
-				obj.object:set_yaw(math.atan2(-back.x, back.z))
-			end
+		if not obj._wander_origin then
+			obj._wander_origin = vector.new(pos.x, pos.y, pos.z)
+		end
+		local dist_origin = vector.distance(
+			{x = pos.x, y = obj._wander_origin.y, z = pos.z},
+			obj._wander_origin
+		)
+		if dist_origin > WANDER_RADIUS then
+			-- reoriente vers le centre sans toucher à la vélocité
+			local back = vector.normalize(vector.subtract(obj._wander_origin, pos))
+			obj.object:set_yaw(math.atan2(-back.x, back.z))
+			obj.following = nil
+		end
 		else
 			obj._wander_origin = nil
 		end
