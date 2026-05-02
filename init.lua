@@ -318,8 +318,16 @@ core.register_on_mods_loaded(function()
 
 	local original_punch = def.on_punch
 	def.on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
-		-- annule knockback
+		-- annule knockback immédiatement et pendant 0.5s
 		self.object:set_velocity({x = 0, y = 0, z = 0})
+		local gobj = self.object
+		for i = 1, 5 do
+			core.after(i * 0.1, function()
+				if gobj and gobj:get_pos() then
+					gobj:set_velocity({x = 0, y = 0, z = 0})
+				end
+			end)
+		end
 		-- riposte si joueur
 		if puncher and puncher:is_player() then
 			local pname = puncher:get_player_name()

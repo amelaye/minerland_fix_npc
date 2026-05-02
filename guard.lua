@@ -290,6 +290,14 @@ mobs:register_mob("minerland_fix_npc:guard", {
 
 	on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
 		self.object:set_velocity({x = 0, y = 0, z = 0})
+		local gobj = self.object
+		for i = 1, 5 do
+			core.after(i * 0.1, function()
+				if gobj and gobj:get_pos() then
+					gobj:set_velocity({x = 0, y = 0, z = 0})
+				end
+			end)
+		end
 	end,
 
 	on_rightclick = function(self, clicker)
@@ -326,19 +334,20 @@ core.register_globalstep(function(dtime)
 			obj.object:set_velocity({x = 0, y = 0, z = 0})
 			obj:set_animation("stand")
 		elseif obj.order == "wander" then
-		if not obj._wander_origin then
-			obj._wander_origin = vector.new(pos.x, pos.y, pos.z)
-		end
-		local dist_origin = vector.distance(
-			{x = pos.x, y = obj._wander_origin.y, z = pos.z},
-			obj._wander_origin
-		)
-		if dist_origin > WANDER_RADIUS then
-			-- reoriente vers le centre sans toucher à la vélocité
-			local back = vector.normalize(vector.subtract(obj._wander_origin, pos))
-			obj.object:set_yaw(math.atan2(-back.x, back.z))
-			obj.following = nil
-		end
+			-- stocke la position d'origine au premier tick en wander
+			if not obj._wander_origin then
+				obj._wander_origin = vector.new(pos.x, pos.y, pos.z)
+			end
+			-- hors rayon : reoriente vers le centre sans toucher à la vélocité
+			local dist_origin = vector.distance(
+				{x = pos.x, y = obj._wander_origin.y, z = pos.z},
+				obj._wander_origin
+			)
+			if dist_origin > WANDER_RADIUS then
+				local back = vector.normalize(vector.subtract(obj._wander_origin, pos))
+				obj.object:set_yaw(math.atan2(-back.x, back.z))
+				obj.following = nil
+			end
 		else
 			obj._wander_origin = nil
 		end
@@ -391,8 +400,19 @@ core.register_globalstep(function(dtime)
 		local any_global_gun = false
 		for k, _ in pairs(global_gun_warned) do any_global_gun = true break end
 
+		local any_suspect = false
+		for _, player in ipairs(players) do
+			if player:get_player_name() == SUSPECT then
+				local ppos = player:get_pos()
+				if ppos and vector.distance(pos, ppos) <= SUSPECT_DIST then
+					any_suspect = true
+					break
+				end
+			end
+		end
+
 		-- reset si aucune menace
-		if not any_threatened and not any_gun and not any_global_gun and not state.shooting then
+		if not any_threatened and not any_gun and not any_global_gun and not state.shooting and not any_suspect then
 			if state.taurus_ent then
 				detach_taurus(state.taurus_ent)
 				state.taurus_ent = nil
@@ -413,17 +433,17 @@ core.register_globalstep(function(dtime)
 			-- surveillance du suspect
 			if pname == SUSPECT then
 				if dist <= SUSPECT_DIST then
-					-- rotation à chaque tick
+					-- rotation + arme à chaque tick
 					local dir = vector.subtract(ppos, pos)
 					obj.object:set_yaw(math.atan2(-dir.x, dir.z))
-					-- message + arme une seule fois
+					ensure_taurus(state, obj.object)
+					raise_arm(obj.object)
+					-- message une seule fois
 					if not state.suspect_warned[pname] then
 						state.suspect_warned[pname] = true
 						core.chat_send_player(pname,
 							core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
 							"Je te surveille toi, sale mécréant, délinquant, traitre !")
-						ensure_taurus(state, obj.object)
-						raise_arm(obj.object)
 					end
 				elseif dist > SUSPECT_DIST and state.suspect_warned[pname] then
 					state.suspect_warned[pname] = nil
