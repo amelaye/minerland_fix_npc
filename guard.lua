@@ -445,6 +445,10 @@ core.register_globalstep(function(dtime)
 			state.threatened = {}
 			state.gun_warned = {}
 		end
+		-- reset message suspect seulement si aucun garde ne voit le suspect
+		if not any_suspect then
+			global_suspect_warned[SUSPECT] = nil
+		end
 
 		for _, player in ipairs(players) do
 			local pname = player:get_player_name()
@@ -467,13 +471,6 @@ core.register_globalstep(function(dtime)
 							core.colorize(GUARD_COLOR, "<" .. (obj.nametag or "Garde Royale") .. ">") .. " " ..
 							"Je te surveille toi, sale mécréant, délinquant, traitre !")
 					end
-				elseif dist > SUSPECT_DIST and global_suspect_warned[pname] then
-					global_suspect_warned[pname] = nil
-					if not any_gun and not any_threatened then
-						detach_taurus(state.taurus_ent)
-						state.taurus_ent = nil
-						lower_arm(obj.object)
-					end
 				end
 			end
 
@@ -493,7 +490,7 @@ core.register_globalstep(function(dtime)
 					end)
 				end
 			else
-				if state.taurus_ent and not any_threatened and not any_gun then
+				if state.taurus_ent and not any_threatened and not any_gun and pname ~= SUSPECT then
 					detach_taurus(state.taurus_ent)
 					state.taurus_ent = nil
 					lower_arm(obj.object)
