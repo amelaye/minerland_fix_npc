@@ -503,7 +503,7 @@ core.register_globalstep(function(dtime)
 					core.after(3, function()
 						if state.lead_warned then state.lead_warned[pname] = nil end
 					end)
-			end
+				end
 				goto next_player
 			else
 				state.lead_warned[pname] = nil

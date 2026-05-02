@@ -344,11 +344,11 @@ core.register_on_mods_loaded(function()
 					if raise_arm then raise_arm(self.object) end
 					local sdir = vector.subtract(puncher:get_pos(), self.object:get_pos())
 					self.object:set_yaw(math.atan2(-sdir.x, sdir.z))
-					local gobj = self.object
+					local gobj2 = self.object
 					core.after(0.1, function()
-						if not gobj or not gobj:get_pos() then return end
+						if not gobj2 or not gobj2:get_pos() then return end
 						if not puncher or not puncher:get_pos() then return end
-						if fire_bullet then fire_bullet(gobj, puncher) end
+						if fire_bullet then fire_bullet(gobj2, puncher) end
 					end)
 					core.after(3, function()
 						state.shooting = false
