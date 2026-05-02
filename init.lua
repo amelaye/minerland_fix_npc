@@ -215,6 +215,8 @@ local function wrap_rightclick(entity_name)
 	end
 end
 
+local QUEEN = "amelaye"
+
 -- wrapping du on_rightclick pour le garde
 local function wrap_rightclick_guard(entity_name)
 	local def = core.registered_entities[entity_name]
@@ -227,9 +229,8 @@ local function wrap_rightclick_guard(entity_name)
 		local item = clicker:get_wielded_item()
 		local iname = item:get_name()
 		local pname = clicker:get_player_name()
-		local QUEEN_NAME = core.settings:get("minerland_guard_queen") or "amelaye"
 
-		if iname == stick and pname == QUEEN_NAME then
+		if iname == stick and pname == QUEEN then
 			ensure_id(self)
 			context[pname] = {
 				npc_id = self.id,
@@ -253,3 +254,49 @@ end)
 
 -- garde
 dofile(core.get_modpath("minerland_fix_npc") .. "/guard.lua")
+
+-- wrappe on_punch du garde pour contourner mobs_redo
+core.register_on_mods_loaded(function()
+	local def = core.registered_entities["minerland_fix_npc:guard"]
+	if not def then return end
+
+	local original_punch = def.on_punch
+	def.on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
+		self.object:set_velocity({x = 0, y = 0, z = 0})
+		local gobj = self.object
+		for i = 1, 5 do
+			core.after(i * 0.1, function()
+				if gobj and gobj:get_pos() then
+					gobj:set_velocity({x = 0, y = 0, z = 0})
+				end
+			end)
+		end
+		if puncher and puncher:is_player() then
+			local pname = puncher:get_player_name()
+			local queen = core.settings:get("minerland_guard_queen") or "amelaye"
+			if pname ~= queen then
+				local state = guard_states and guard_states[self.object]
+				if state and not state.shooting then
+					state.shooting = true
+					core.chat_send_player(pname,
+						core.colorize(GUARD_COLOR, "<" .. (self.nametag or "Garde Royale") .. ">") ..
+						" Interdit de frapper la Garde Royale !")
+					if ensure_taurus then ensure_taurus(state, self.object) end
+					if raise_arm then raise_arm(self.object) end
+					local sdir = vector.subtract(puncher:get_pos(), self.object:get_pos())
+					self.object:set_yaw(math.atan2(-sdir.x, sdir.z))
+					local gobj2 = self.object
+					core.after(0.1, function()
+						if not gobj2 or not gobj2:get_pos() then return end
+						if not puncher or not puncher:get_pos() then return end
+						if fire_bullet then fire_bullet(gobj2, puncher) end
+					end)
+					core.after(3, function()
+						state.shooting = false
+					end)
+				end
+			end
+		end
+		if original_punch then return original_punch(self, puncher, time_from_last_punch, tool_capabilities, dir) end
+	end
+end)
