@@ -445,10 +445,7 @@ core.register_globalstep(function(dtime)
 			state.threatened = {}
 			state.gun_warned = {}
 		end
-		-- reset message suspect seulement si aucun garde ne voit le suspect
-		if not any_suspect then
-			global_suspect_warned[SUSPECT] = nil
-		end
+
 
 		for _, player in ipairs(players) do
 			local pname = player:get_player_name()
@@ -570,7 +567,30 @@ core.register_globalstep(function(dtime)
 			::next_player::
 		end
 
-		::continue::
+			::continue::
+	end
+
+	-- reset global_suspect_warned si aucun garde ne voit le suspect
+	local suspect_seen = false
+	for _, player in ipairs(players) do
+		if player:get_player_name() == SUSPECT then
+			local ppos = player:get_pos()
+			if ppos then
+				for _, obj in pairs(core.luaentities) do
+					if obj.name == "minerland_fix_npc:guard" and obj.object then
+						local opos = obj.object:get_pos()
+						if opos and vector.distance(opos, ppos) <= SUSPECT_DIST then
+							suspect_seen = true
+							break
+						end
+					end
+				end
+			end
+			break
+		end
+	end
+	if not suspect_seen then
+		global_suspect_warned[SUSPECT] = nil
 	end
 end)
 
