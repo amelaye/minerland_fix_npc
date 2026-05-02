@@ -695,16 +695,17 @@ core.register_chatcommand("osecour", {
 
 			local guard_ref = obj
 			local check_timer = 0
-			local step_id = {}
+			local step_id = {active = true}
 
 			local function rescue_step(dtime)
+				if not step_id.active then return end
 				check_timer = check_timer + dtime
 				if check_timer < 0.2 then return end
 				check_timer = 0
 
 				local ok, gpos_check = pcall(function() return guard_ref:get_pos() end)
 				if not ok or not gpos_check then
-					core.unregister_globalstep(step_id[1])
+					step_id.active = false
 					rescue_guard_obj = nil
 					return
 				end
@@ -717,7 +718,7 @@ core.register_chatcommand("osecour", {
 					core.chat_send_all(core.colorize(GUARD_COLOR, "<Garde Royale>") .. " Suspect hors de portée. Je rentre.")
 					guard_ref:remove()
 					rescue_guard_obj = nil
-					core.unregister_globalstep(step_id[1])
+					step_id.active = false
 					return
 				end
 
@@ -755,7 +756,6 @@ core.register_chatcommand("osecour", {
 				end
 			end
 
-			step_id[1] = rescue_step
 			core.register_globalstep(rescue_step)
 		end
 
