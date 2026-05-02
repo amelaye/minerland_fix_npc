@@ -478,7 +478,7 @@ core.register_globalstep(function(dtime)
 				end
 			else
 				-- joueur a rangé son arme : bras baissé seulement si plus aucune menace
-				if state.taurus_ent and not any_threatened and not any_gun then
+				if state.taurus_ent and not any_threatened and not any_gun and pname ~= SUSPECT then
 					detach_taurus(state.taurus_ent)
 					state.taurus_ent = nil
 					lower_arm(obj.object)
