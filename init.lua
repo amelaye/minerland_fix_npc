@@ -117,16 +117,10 @@ local function get_formspec(self)
 		"formspec_version[4]",
 		"size[5.5,4.2]",
 		"label[0.375,0.4;", S("NPC Settings"), "]",
-
-		-- skin
 		"label[0.375,1.0;", S("Skin:"), "]",
 		"dropdown[0.375,1.3;4.75,0.7;skin;", skin_labels, ";", skin_idx, "]",
-
-		-- ordre
 		"label[0.375,2.2;", S("Order:"), "]",
 		"dropdown[0.375,2.5;4.75,0.7;ordermode;wander,stand,follow;", order_idx, "]",
-
-		-- boutons
 		"button[0.375,3.4;2.2,0.6;apply;", S("Apply"), "]",
 		"button[2.875,3.4;2.2,0.6;exit;", S("Close"), "]",
 	}, "")
@@ -155,7 +149,6 @@ local function apply_order(self, order)
 		self.object:set_velocity({x = 0, y = 0, z = 0})
 	elseif order == "wander" then
 		self.state = "walk"
-		-- stocke la position d'origine pour la patrouille
 		self._wander_origin = vector.new(self.object:get_pos())
 	elseif order == "follow" then
 		self.state = "walk"
@@ -164,12 +157,10 @@ end
 
 -- réception des champs de la formspec
 core.register_on_player_receive_fields(function(player, formname, fields)
-
 	if formname ~= "minerland_fix_npc:settings" then return end
 
 	local pname = player:get_player_name()
 	local self = get_entity_from_context(pname)
-
 	if not self then return end
 
 	if fields["exit"] or fields["quit"] then
@@ -179,7 +170,6 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 
 	if fields["apply"] then
-
 		if fields["skin"] then
 			local skins = SKINS[self.name]
 			if skins then
@@ -189,17 +179,15 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 				end
 			end
 		end
-
 		if fields["ordermode"] then
 			apply_order(self, fields["ordermode"])
 		end
-
 		core.show_formspec(pname, "minerland_fix_npc:settings", get_formspec(self))
 		return
 	end
 end)
 
--- wrapping du on_rightclick pour les 3 entités
+-- wrapping du on_rightclick pour les NPCs standard
 local function wrap_rightclick(entity_name)
 	local def = core.registered_entities[entity_name]
 	if not def then
@@ -213,9 +201,7 @@ local function wrap_rightclick(entity_name)
 		if item:get_name() == stick
 		and (self.owner == pname or
 			core.check_player_privs(clicker, {protection_bypass = true})) then
-
 			ensure_id(self)
-
 			context[pname] = {
 				npc_id = self.id,
 				entity_name = entity_name,
@@ -229,8 +215,7 @@ local function wrap_rightclick(entity_name)
 	end
 end
 
-local QUEEN = "amelaye"
-
+-- wrapping du on_rightclick pour le garde
 local function wrap_rightclick_guard(entity_name)
 	local def = core.registered_entities[entity_name]
 	if not def then
@@ -242,20 +227,9 @@ local function wrap_rightclick_guard(entity_name)
 		local item = clicker:get_wielded_item()
 		local iname = item:get_name()
 		local pname = clicker:get_player_name()
+		local QUEEN_NAME = core.settings:get("minerland_guard_queen") or "amelaye"
 
-		-- éjecte si le joueur tient une laisse
-		if iname == "leads:lead" or (core.registered_items[iname]
-		and core.registered_items[iname].groups
-		and core.registered_items[iname].groups.lead) then
-			local dir = clicker:get_look_dir()
-			clicker:set_velocity({x = -dir.x * 20, y = 8, z = -dir.z * 20})
-			core.chat_send_player(pname,
-				"<" .. (self.nametag or "Garde") .. "> " ..
-				"Oses-tu m'attacher ?!")
-			return
-		end
-
-		if iname == stick and pname == QUEEN then
+		if iname == stick and pname == QUEEN_NAME then
 			ensure_id(self)
 			context[pname] = {
 				npc_id = self.id,
@@ -275,37 +249,6 @@ core.register_on_mods_loaded(function()
 	wrap_rightclick("mobs_npc:igor")
 	wrap_rightclick("mobs_npc:trader")
 	wrap_rightclick_guard("minerland_fix_npc:guard")
-
-	-- éjection si on tente d'attacher une laisse sur un garde
-	local lead_def = core.registered_items["leads:lead"]
-	if not lead_def then return end
-
-	local original_use = lead_def.on_use
-	local original_secondary = lead_def.on_secondary_use
-
-	local function try_eject(user, pointed_thing)
-		if not pointed_thing or pointed_thing.type ~= "object" then return false end
-		local obj = pointed_thing.ref
-		if not obj then return false end
-		local ent = obj:get_luaentity()
-		if not ent or ent.name ~= "minerland_fix_npc:guard" then return false end
-		local dir = user:get_look_dir()
-		user:set_velocity({x = -dir.x * 20, y = 8, z = -dir.z * 20})
-		core.chat_send_player(user:get_player_name(),
-			"<" .. (ent.nametag or "Garde") .. "> Oses-tu m'attacher ?!")
-		return true
-	end
-
-	core.override_item("leads:lead", {
-		on_use = function(itemstack, user, pointed_thing)
-			if try_eject(user, pointed_thing) then return itemstack end
-			if original_use then return original_use(itemstack, user, pointed_thing) end
-		end,
-		on_secondary_use = function(itemstack, user, pointed_thing)
-			if try_eject(user, pointed_thing) then return itemstack end
-			if original_secondary then return original_secondary(itemstack, user, pointed_thing) end
-		end,
-	})
 end)
 
 -- garde
@@ -337,7 +280,8 @@ core.register_on_mods_loaded(function()
 				if state and not state.shooting then
 					state.shooting = true
 					core.chat_send_player(pname,
-						"<" .. (self.nametag or "Garde") .. "> Interdit de frapper la Garde Royale !")
+						core.colorize(GUARD_COLOR, "<" .. (self.nametag or "Garde Royale") .. ">") ..
+						" Interdit de frapper la Garde Royale !")
 					if not state.taurus_ent then
 						state.taurus_ent = attach_taurus and attach_taurus(self.object)
 					end

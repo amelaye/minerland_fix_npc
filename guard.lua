@@ -22,7 +22,7 @@ if not SUSPECT_DIST then SUSPECT_DIST = 10 end
 local RESCUE_DIST = tonumber(core.settings:get("minerland_guard_rescue_dist"))
 if not RESCUE_DIST then RESCUE_DIST = 20 end
 
-local GUARD_COLOR = core.settings:get("minerland_guard_color")
+GUARD_COLOR = core.settings:get("minerland_guard_color")
 if not GUARD_COLOR then GUARD_COLOR = "#FF0000" end
 
 local WANDER_RADIUS = tonumber(core.settings:get("minerland_guard_wander_radius"))
@@ -129,14 +129,9 @@ end
 
 -- helper : attache le taurus seulement si absent ou invalide
 local function ensure_taurus(state, guard_obj)
-    local valid = false
-    if state.taurus_ent then
-        local ok, p = pcall(function() return state.taurus_ent:get_pos() end)
-        valid = ok and p ~= nil
-    end
-    if not valid then
-        state.taurus_ent = attach_taurus(guard_obj)
-    end
+	if not state.taurus_ent or not state.taurus_ent:get_pos() then
+		state.taurus_ent = attach_taurus(guard_obj)
+	end
 end
 
 core.register_entity("minerland_fix_npc:guard_bullet", {
@@ -257,6 +252,7 @@ mobs:register_mob("minerland_fix_npc:guard", {
 		{"minerland_guard2.png"},
 		{"minerland_guard3.png"},
 		{"minerland_guard4.png"},
+		{"minerland_guard5.png"},
 	},
 	makes_footstep_sound = true,
 	sounds = {},
@@ -477,7 +473,7 @@ core.register_globalstep(function(dtime)
 					end)
 				end
 			else
-				-- joueur a rangé son arme : bras baissé seulement si plus aucune menace
+				-- joueur a rangé son arme : bras baissé seulement si plus aucune menace et pas le suspect
 				if state.taurus_ent and not any_threatened and not any_gun and pname ~= SUSPECT then
 					detach_taurus(state.taurus_ent)
 					state.taurus_ent = nil
